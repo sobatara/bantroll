@@ -1,0 +1,6304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Top 10 Leagues — Smart Betting Terminal & Bankroll Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --background: #f8fafc;
+      --foreground: #0f172a;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --muted: #f1f5f9;
+      --muted-foreground: #64748b;
+      --primary: #1d4ed8;
+      --accent: #f8fafc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #090d16;
+        --foreground: #f1f5f9;
+        --card: #0f172a;
+        --border: #1e293b;
+        --muted: #1e293b;
+        --muted-foreground: #94a3b8;
+        --primary: #3b82f6;
+        --accent: #0f172a;
+      }
+    }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--background); color: var(--foreground); }
+    .tab-bar { display: inline-flex; background: var(--muted); padding: 3px; border-radius: 12px; gap: 3px; border: 1px solid var(--border); }
+    .tab-btn { padding: 6px 14px; border-radius: 9px; font-size: 12px; font-weight: 700; color: var(--muted-foreground); transition: all 0.15s; }
+    .tab-btn:hover { color: var(--foreground); }
+    .tab-btn.active { background: var(--card); color: var(--foreground); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .chip { cursor: pointer; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--card); color: var(--muted-foreground); transition: all 0.15s; white-space: nowrap; }
+    .chip:hover:not(.active) { background: var(--muted); color: var(--foreground); }
+    .chip.active { background: #1d4ed8 !important; color: #ffffff !important; border-color: #1d4ed8 !important; font-weight: 700; box-shadow: 0 2px 8px rgba(29,78,216,0.3); }
+    .btn-primary { background: #1d4ed8; color: white; font-weight: 700; border-radius: 8px; transition: all 0.15s; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-sm { background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-weight: 600; padding: 5px 10px; font-size: 11.5px; transition: all 0.15s; }
+    .btn-sm:hover { background: var(--muted); }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+  </style>
+</head>
+<body class="p-3 sm:p-5 min-h-screen">
+<div class="max-w-5xl mx-auto space-y-3.5">
+
+  <!-- HEADER -->
+  <header class="flex flex-wrap items-start justify-between gap-3 pb-1 border-b border-[var(--border)]">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="text-2xl">🏆</span>
+        <div>
+          <h1 class="text-base sm:text-lg font-black tracking-tight flex items-center gap-2">
+            <span>TOP 10 WORLD LEAGUES</span>
+            <span class="text-[10px] bg-emerald-600 text-white px-2 py-0.5 rounded-md font-extrabold">Smart Bet Terminal</span>
+          </h1>
+          <p class="text-[11px] text-[var(--muted-foreground)]">Premier League · La Liga · Serie A · Bundesliga · Ligue 1 · Liga Portugal · Eredivisie · Süper Lig · Belgian Pro · Brasileirão</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 mt-1.5 flex-wrap text-xs">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 pulse-dot inline-block"></span>
+        <span class="text-[11px] text-[var(--muted-foreground)]" id="status-text">Live Feed API-Sports Aktif</span>
+        <span class="text-[10px] text-slate-300 dark:text-slate-600">•</span>
+        <span id="header-1xbet-badge" onclick="openOddsModal()" style="cursor:pointer" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 hover:bg-emerald-200 transition-all shadow-2xs" title="Klik untuk rincian feed 1xBet & sinkronisasi odds">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="header-1xbet-text">⚡ 1xBet Live Feed: 60 Laga Top 10 Dunia (56 Pasaran Live)</span>
+        </span>
+        <span id="cloud-sync-badge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-800 shadow-2xs" title="Sinkronisasi Realtime Aktif (Laptop & HP)"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span><span>☁️ Cloud Sync Aktif</span></span>
+      </div>
+    </div>
+
+    <!-- MAIN BETTING TABS -->
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="setMainTab('bet')" id="main-tab-bet">💡 Sinyal &amp; Bankroll</button>
+      <button class="tab-btn" onclick="setMainTab('history')" id="main-tab-history">📜 Histori Sinyal (4 Hari)</button>
+      <button class="tab-btn" onclick="setMainTab('compound')" id="main-tab-compound">📈 Rolling Compound (DNB)</button>
+      <button class="tab-btn" onclick="setMainTab('parlay')" id="main-tab-parlay">🎯 Smart Parlay</button>
+    </div>
+  </header>
+
+  <!-- LEAGUE SELECTOR CHIPS -->
+  <div class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-2xs space-y-2">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+      <div class="flex items-center gap-1.5 flex-wrap flex-1">
+        <span class="chip active" onclick="filterLeague('all')" id="chip-league-all">⭐ Semua Top 10 Liga</span>
+        <span class="chip" onclick="filterLeague('39')" id="chip-league-39">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</span>
+        <span class="chip" onclick="filterLeague('140')" id="chip-league-140">🇪🇸 La Liga</span>
+        <span class="chip" onclick="filterLeague('135')" id="chip-league-135">🇮🇹 Serie A</span>
+        <span class="chip" onclick="filterLeague('78')" id="chip-league-78">🇩🇪 Bundesliga</span>
+        <span class="chip" onclick="filterLeague('61')" id="chip-league-61">🇫🇷 Ligue 1</span>
+        <span class="chip" onclick="filterLeague('94')" id="chip-league-94">🇵🇹 Liga Portugal</span>
+        <span class="chip" onclick="filterLeague('88')" id="chip-league-88">🇳🇱 Eredivisie</span>
+        <span class="chip" onclick="filterLeague('144')" id="chip-league-144">🇧🇪 Belgian Pro</span>
+        <span class="chip" onclick="filterLeague('203')" id="chip-league-203">🇹🇷 Süper Lig</span>
+        <span class="chip" onclick="filterLeague('71')" id="chip-league-71">🇧🇷 Brasileirão</span>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <button class="btn-sm" onclick="openOddsModal()">🎰 Pasaran &amp; API Odds</button>
+        <button class="btn-sm" onclick="syncTop5Odds(true)">🔄 Auto-Sync</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 1: TRACKER BET & SINYAL NILAI              -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="view-bet" class="space-y-3.5">
+
+    <!-- STRATEGY SELECTOR PRESETS -->
+    <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2">
+      <div class="flex items-center justify-between text-xs">
+        <div class="font-bold flex items-center gap-1.5">
+          <span>🎯</span>
+          <span>Pilih Profil Strategi Taruhan Eropa:</span>
+        </div>
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Sistem Arbitrase Paling Worth It Aktif</span>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="strategy-presets-grid">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- SINYAL REKOMENDASI TERVERIFIKASI & RADAR JEBAKAN -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <!-- Sinyal Rekomendasi (2 Kolom) -->
+      <div class="md:col-span-2 p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5">
+        <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+          <div>
+            <h3 class="text-xs sm:text-sm font-bold flex items-center gap-1.5" id="value-picks-header-title">
+              <span>🏰</span>
+              <span>Sinyal Rekomendasi Paling Worth It</span>
+            </h3>
+            <p class="text-[11px] text-[var(--muted-foreground)]" id="value-picks-header-subtitle">1 Laga = 1 Sinyal Terbaik (Bebas Duplikasi &amp; Terverifikasi 1xBet).</p>
+          </div>
+          <span class="text-[9.5px] px-2 py-0.5 rounded font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300" id="value-picks-header-badge">Optimal</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5" id="value-picks-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Radar Perangkap Bandar (1 Kolom) -->
+      <div class="p-3.5 rounded-xl border border-amber-300 dark:border-amber-900 bg-amber-50/40 dark:bg-amber-950/20 space-y-2.5">
+        <div class="flex items-center justify-between pb-2 border-b border-amber-200 dark:border-amber-900">
+          <div>
+            <h3 class="text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+              <span>🚨</span>
+              <span>Radar Jebakan Bandar (Trap)</span>
+            </h3>
+            <p class="text-[10.5px] text-[var(--muted-foreground)]">Tim overhyped publik tapi rawan tergelincir.</p>
+          </div>
+          <span class="text-[9px] bg-red-600 text-white px-2 py-0.5 rounded font-black">Waspada!</span>
+        </div>
+        <div class="space-y-2" id="trap-alerts-container">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- PENCATATAN TARUHAN BARU & KALKULATOR -->
+    <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3" id="bet-form-card">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+        <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5">
+          <span>📝</span>
+          <span>Bankroll</span>
+        </div>
+        <span class="text-[10px] text-[var(--muted-foreground)]">Platform Resmi: 1xBet</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-xs">
+        <!-- Match Selector -->
+        <div class="sm:col-span-2 space-y-1">
+          <label class="text-[11px] font-semibold text-[var(--muted-foreground)]">Pilih Pertandingan:</label>
+          <select id="bet-match-select" onchange="onBetMatchChange()" class="w-full p-2 rounded-lg border border-[var(--border)] bg-[var(--background)] font-medium">
+            <!-- Populated by JS -->
+          </select>
+        </div>
+
+        <!-- Bet Type -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-[var(--muted-foreground)]">Jenis Taruhan:</label>
+          <select id="bet-selection-type" onchange="updateBetCalculator()" class="w-full p-2 rounded-lg border border-[var(--border)] bg-[var(--background)] font-medium">
+            <option value="home">1 (Home Win)</option>
+            <option value="draw">X (Seri / Draw)</option>
+            <option value="away">2 (Away Win)</option>
+            <option value="1x">1X (Home / Seri)</option>
+            <option value="x2">X2 (Away / Seri)</option>
+            <option value="home_dnb">Home DNB (Seri Refund)</option>
+            <option value="away_dnb">Away DNB (Seri Refund)</option>
+          </select>
+        </div>
+
+        <!-- Odds -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-[var(--muted-foreground)]">Odds 1xBet:</label>
+          <input type="number" step="0.01" id="bet-odds-input" oninput="updateBetCalculator()" placeholder="1.65" class="w-full p-2 rounded-lg border border-[var(--border)] bg-[var(--background)] font-bold font-mono">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-end text-xs">
+        <!-- Stake -->
+        <div class="space-y-1">
+          <label class="text-[11px] font-semibold text-[var(--muted-foreground)]">Nominal Taruhan (Rp):</label>
+          <input type="number" id="bet-stake-input" oninput="updateBetCalculator()" value="100000" class="w-full p-2 rounded-lg border border-[var(--border)] bg-[var(--background)] font-bold">
+        </div>
+
+        <!-- Potential Payout -->
+        <div class="p-2.5 rounded-lg border border-emerald-300 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/30 flex items-center justify-between">
+          <span class="text-[11px] text-[var(--muted-foreground)]">Potensi Payout:</span>
+          <strong class="text-emerald-600 font-mono text-sm" id="calc-potential-payout">Rp 165.000</strong>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="button" onclick="saveBetRecord()" class="btn-primary py-2.5 px-4 flex items-center justify-center gap-1.5 shadow-sm text-xs">
+          <span>💾</span>
+          <span>Simpan ke Bankroll</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI SUMMARY BAR -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Total Taruhan</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-primary" id="kpi-total-bets">0 Tiket</div>
+      </div>
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Total Modal</span>
+        <div class="text-base sm:text-lg font-black mt-0.5" id="kpi-total-staked">Rp 0</div>
+      </div>
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Laba Bersih</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-emerald-600" id="kpi-net-profit">+Rp 0</div>
+      </div>
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Win Rate</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-emerald-600" id="kpi-win-rate">0.0%</div>
+      </div>
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] col-span-2 sm:col-span-1">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Yield / ROI</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-emerald-600" id="kpi-roi">+0.0%</div>
+      </div>
+    </div>
+
+
+    <!-- HISTORI TIKET TARUHAN -->
+    <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5">
+      <div class="flex items-center justify-between pb-2 border-b border-[var(--border)] flex-wrap gap-2">
+        <div class="font-bold text-xs sm:text-sm flex items-center gap-1.5">
+          <span>📋</span>
+          <span>Histori Bankroll</span>
+          <span class="text-[10.5px] text-[var(--muted-foreground)] font-normal" id="bet-history-count">(0 tiket)</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button class="btn-sm text-[10.5px]" onclick="filterBetStatus('all')">Semua</button>
+          <button class="btn-sm text-[10.5px] text-emerald-600" onclick="filterBetStatus('won')">Menang</button>
+          <button class="btn-sm text-[10.5px] text-rose-600" onclick="filterBetStatus('lost')">Kalah</button>
+          <button class="btn-sm text-[10.5px] text-amber-600" onclick="filterBetStatus('pending')">Menunggu</button>
+        </div>
+      </div>
+      <div id="bet-history-list" class="space-y-2">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB: HISTORI SINYAL (RETENSI OTOMATIS 4 HARI)   -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="view-history" class="hidden space-y-3.5">
+
+    <!-- Notice & Info Banner -->
+    <div class="p-3.5 rounded-xl border border-sky-300 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/20 flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-lg shrink-0">
+          📜
+        </div>
+        <div>
+          <div class="text-xs sm:text-sm font-bold flex items-center gap-2">
+            <span>Histori Sinyal Rekomendasi Algoritma</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500 text-white shadow-2xs">Retensi 4 Hari</span>
+          </div>
+          <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5">
+            Semua sinyal dari laga selesai (Full Time) tersimpan selama <strong>4 hari (96 jam)</strong>. Sinyal kedaluwarsa otomatis dibersihkan mandiri agar sistem tetap ringan &amp; akurat.
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)]" id="hist-total-badge">
+          ⏳ Memuat Sinyal...
+        </span>
+        <button class="btn-sm text-xs font-semibold" onclick="renderSignalHistoryView()">
+          🔄 Refresh
+        </button>
+        <button class="btn-sm text-xs text-rose-500 hover:text-rose-600 font-semibold" onclick="clearSignalHistory()" title="Reset histori sinyal">
+          🗑️ Reset Histori
+        </button>
+      </div>
+    </div>
+
+    <!-- KPI Summary Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Total Sinyal Selesai</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-primary" id="kpi-hist-total">0 Laga</div>
+      </div>
+      <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Akurasi / Win Rate</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-emerald-600" id="kpi-hist-winrate">0%</div>
+      </div>
+      <div class="p-3 rounded-xl border border-emerald-300/50 dark:border-emerald-900/50 bg-emerald-500/5">
+        <span class="text-[10.5px] text-emerald-600 font-semibold">✅ Sinyal Tembus</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-emerald-600" id="kpi-hist-won">0</div>
+      </div>
+      <div class="p-3 rounded-xl border border-rose-300/50 dark:border-rose-900/50 bg-rose-500/5">
+        <span class="text-[10.5px] text-rose-600 font-semibold">❌ Meleset</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-rose-600" id="kpi-hist-lost">0</div>
+      </div>
+      <div class="p-3 rounded-xl border border-amber-300/50 dark:border-amber-900/50 bg-amber-500/5">
+        <span class="text-[10.5px] text-amber-600 font-semibold">🔄 Seri / Refund</span>
+        <div class="text-base sm:text-lg font-black mt-0.5 text-amber-600" id="kpi-hist-refund">0</div>
+      </div>
+    </div>
+
+    <!-- Filter & Search Controls -->
+    <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <!-- Status Tabs -->
+        <div class="flex items-center gap-1.5 flex-wrap" id="hist-status-filters">
+          <button class="chip active text-xs py-1 px-3" onclick="setHistFilterStatus('all')" id="hist-btn-all">Semua Sinyal (<span id="hist-cnt-all">0</span>)</button>
+          <button class="chip text-xs py-1 px-3" onclick="setHistFilterStatus('won')" id="hist-btn-won">✅ Tembus (<span id="hist-cnt-won">0</span>)</button>
+          <button class="chip text-xs py-1 px-3" onclick="setHistFilterStatus('lost')" id="hist-btn-lost">❌ Meleset (<span id="hist-cnt-lost">0</span>)</button>
+          <button class="chip text-xs py-1 px-3" onclick="setHistFilterStatus('refund')" id="hist-btn-refund">🔄 Refund (<span id="hist-cnt-refund">0</span>)</button>
+        </div>
+
+        <!-- Search input -->
+        <div class="flex items-center gap-2 flex-1 sm:max-w-xs">
+          <input type="text" id="hist-search-input" oninput="renderSignalHistoryView()" placeholder="🔍 Cari klub (cth: Chelsea, Monaco)..." class="w-full text-xs p-2 rounded-lg border border-[var(--border)] bg-[var(--background)]">
+        </div>
+      </div>
+
+      <!-- Strategy & League Sub-filters -->
+      <div class="flex flex-wrap items-center gap-2 pt-1.5 border-t border-[var(--border)] text-xs">
+        <span class="text-[11px] font-semibold text-[var(--muted-foreground)]">Filter Strategi:</span>
+        <select id="hist-strategy-select" onchange="renderSignalHistoryView()" class="p-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium">
+          <option value="all">Semua Strategi Algoritma</option>
+          <option value="home_fortress">🏰 Benteng Kandang</option>
+          <option value="favorit_emas">🌟 Favorit Emas</option>
+          <option value="double_chance">🛡️ Double Chance Aman</option>
+          <option value="dnb_shield">⚖️ Draw No Bet (DNB)</option>
+          <option value="high_odds_sniper">🎯 High Odds Sniper</option>
+        </select>
+
+        <span class="text-[11px] font-semibold text-[var(--muted-foreground)] ml-2">Liga:</span>
+        <select id="hist-league-select" onchange="renderSignalHistoryView()" class="p-1.5 rounded-lg border border-[var(--border)] bg-[var(--background)] text-xs font-medium">
+          <option value="all">Semua Top 10 Liga</option>
+          <option value="EPL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+          <option value="ESP">🇪🇸 La Liga</option>
+          <option value="ITA">🇮🇹 Serie A</option>
+          <option value="GER">🇩🇪 Bundesliga</option>
+          <option value="FRA">🇫🇷 Ligue 1</option>
+          <option value="POR">🇵🇹 Liga Portugal</option>
+          <option value="NED">🇳🇱 Eredivisie</option>
+          <option value="BEL">🇧🇪 Belgian Pro</option>
+          <option value="TUR">🇹🇷 Süper Lig</option>
+          <option value="BRA">🇧🇷 Brasileirão</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Signals Cards Container -->
+    <div id="hist-signals-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <!-- Injected by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="hist-empty-state" class="hidden p-8 text-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--card)] space-y-2">
+      <div class="text-3xl">📭</div>
+      <div class="font-bold text-sm">Belum Ada Sinyal yang Selesai (FT)</div>
+      <p class="text-xs text-[var(--muted-foreground)] max-w-md mx-auto">
+        Histori ini murni mencatat sinyal rekomendasi Anda yang telah <strong>selesai dimainkan (Full Time)</strong>. Begitu pertandingan di Tab 1 selesai, sinyalnya akan otomatis berpindah ke sini dan disimpan selama 4 hari.
+      </p>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 2: ROLLING COMPOUND (3-MODE DNB)           -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="view-compound" class="hidden space-y-3.5">
+    <!-- Compound Mode Selector (3 Solusi) -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+      <div onclick="setCompoundSolution(1)" id="comp-btn-sol1" class="p-3 rounded-xl border-2 border-primary bg-primary/5 cursor-pointer transition-all shadow-2xs">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-black text-primary">Solusi 1</span>
+          <span class="text-[9px] bg-primary text-white px-2 py-0.5 rounded font-bold">Aktif</span>
+        </div>
+        <div class="font-bold text-xs">DNB Single Jalur</div>
+        <p class="text-[10.5px] text-[var(--muted-foreground)] mt-0.5">100k ➔ 160k ➔ 256k Cairkan. 2 Langkah stabil.</p>
+      </div>
+
+      <div onclick="setCompoundSolution(2)" id="comp-btn-sol2" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-bold text-[var(--foreground)]">Solusi 2</span>
+          <span class="text-[9px] text-[var(--muted-foreground)]">Diversifikasi</span>
+        </div>
+        <div class="font-bold text-xs">DNB Jalur Paralel A &amp; B</div>
+        <p class="text-[10.5px] text-[var(--muted-foreground)] mt-0.5">2 tiket terpisah di pekan yang sama. Tahan banting.</p>
+      </div>
+
+      <div onclick="setCompoundSolution(3)" id="comp-btn-sol3" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] cursor-pointer hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between text-xs mb-1">
+          <span class="font-bold text-[var(--foreground)]">Solusi 3</span>
+          <span class="text-[9px] text-[var(--muted-foreground)]">Escalation</span>
+        </div>
+        <div class="font-bold text-xs">DNB Naik Kelas Bertahap</div>
+        <p class="text-[10.5px] text-[var(--muted-foreground)] mt-0.5">Naik unit taruhan saat saldo tembus milestone (Rp 2.5jt / 5jt).</p>
+      </div>
+    </div>
+
+    <!-- Active Compound Card -->
+    <div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3" id="compound-cycle-card">
+      <!-- Rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- TAB 3: SMART PARLAY                            -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div id="view-parlay" class="hidden space-y-3.5">
+    <div class="p-4 rounded-xl border border-[var(--border)] bg-[var(--card)] space-y-3">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-2.5 flex-wrap gap-2">
+        <div>
+          <h3 class="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+            <span>🎯</span>
+            <span>Kombinasi Smart Parlay Top 10 Liga Dunia</span>
+          </h3>
+          <p class="text-[11px] text-[var(--muted-foreground)]">Menggabungkan sinyal terkuat dari 10 Liga Top Dunia (EPL, La Liga, Serie A, Bundesliga, Ligue 1, Liga Portugal, Eredivisie, Süper Lig, Belgian Pro, Brasileirão).</p>
+        </div>
+        <button class="btn-sm" onclick="renderSmartParlay()">🔄 Refresh Tiket</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="smart-parlay-packages">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- GLOBAL CUSTOM DIALOG MODAL (TENGAH LAYAR) -->
+<div id="custom-dialog-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(5px);z-index:99999;align-items:center;justify-content:center;padding:16px">
+  <div class="p-6 rounded-2xl border border-[var(--border)] bg-[var(--card)] max-w-sm w-full space-y-4 shadow-2xl text-center">
+    <div id="custom-dialog-icon" class="text-4xl mx-auto">🎉</div>
+    <div class="space-y-1.5">
+      <h3 id="custom-dialog-title" class="font-black text-sm text-[var(--foreground)]">Konfirmasi</h3>
+      <p id="custom-dialog-message" class="text-xs text-[var(--muted-foreground)] leading-relaxed"></p>
+    </div>
+    <div id="custom-dialog-buttons" class="flex items-center justify-center gap-2.5 pt-2">
+      <!-- Buttons rendered dynamically -->
+    </div>
+  </div>
+</div>
+
+<!-- ODDS & API MODAL -->
+<div id="odds-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px);z-index:999;align-items:center;justify-content:center;padding:16px">
+  <div class="p-5 rounded-xl border border-[var(--border)] bg-[var(--card)] max-w-lg w-full space-y-3 shadow-2xl">
+    <div class="flex items-center justify-between border-b border-[var(--border)] pb-2">
+      <h3 class="font-bold text-sm flex items-center gap-1.5">
+        <span>🎰</span>
+        <span>Integrasi Feed 1xBet &amp; API-Sports</span>
+      </h3>
+      <button onclick="closeOddsModal()" class="text-slate-400 hover:text-slate-600 text-lg">✕</button>
+    </div>
+
+    <div class="p-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 text-xs">
+      <div class="font-bold text-emerald-800 dark:text-emerald-300 mb-0.5">🟢 Koneksi Pro Aktif: Top 10 Liga di Dunia</div>
+      <p class="text-[11px] text-[var(--muted-foreground)]">Server terhubung ke EPL (39), La Liga (140), Serie A (135), Bundesliga (78), Ligue 1 (61), Liga Portugal (94), Eredivisie (88), Belgian Pro (144), Süper Lig (203), &amp; Brasileirão (71).</p>
+    </div>
+
+    <div class="space-y-1.5 text-xs">
+      <label class="font-bold text-[var(--muted-foreground)]">API-Sports Key (Pro Key Aktif):</label>
+      <input type="text" id="api-key-input" value="a43387e489a6880487b830a06d51d8c8" class="w-full p-2 rounded-lg border border-[var(--border)] bg-[var(--background)] font-mono text-xs">
+    </div>
+
+    <div class="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
+      <button class="btn-sm" onclick="closeOddsModal()">Tutup</button>
+      <button class="btn-primary py-1.5 px-3 text-xs" onclick="syncTop5Odds(true)">🔄 Sinkronisasi Sekarang</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// DATA INITIAL BASELINE: 100 LAGA TOP 10 DUNIA
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+// SUPABASE REALTIME CLOUD SYNC (LAPTOP & HP)
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'https://hzydzrpxvxieqpnwtdem.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh6eWR6cnB4dnhpZXFwbnd0ZGVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1MTAyMTMsImV4cCI6MjEwODA4NjIxM30.6ZWzJnFBSaT26lup9H_zMlBzHxbah9k9eIMnn2X0vfk';
+
+let supabaseClient = null;
+try {
+  if (window.supabase && typeof window.supabase.createClient === 'function') {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('⚡ Supabase Client initialized successfully.');
+  }
+} catch (e) {
+  console.warn('Supabase client init error:', e);
+}
+
+function betToRow(b) {
+  return {
+    id: b.id,
+    user_id: 'owner',
+    match: b.match || '',
+    home: b.home || '',
+    away: b.away || '',
+    date_str: b.dateStr || b.date_str || '',
+    league_code: b.leagueCode || b.league_code || '',
+    type: b.type || '',
+    type_label: b.typeLabel || b.type_label || '',
+    odds: Number(b.odds) || 1,
+    stake: Number(b.stake) || 0,
+    status: b.status || 'pending',
+    created_at: b.date || b.created_at || new Date().toISOString()
+  };
+}
+
+function rowToBet(r) {
+  return {
+    id: r.id,
+    match: r.match,
+    home: r.home,
+    away: r.away,
+    dateStr: r.date_str,
+    leagueCode: r.league_code,
+    type: r.type,
+    typeLabel: r.type_label,
+    odds: Number(r.odds),
+    stake: Number(r.stake),
+    status: r.status,
+    date: r.created_at
+  };
+}
+
+async function syncBetToCloud(bet) {
+  if (!supabaseClient) return;
+  try {
+    const row = betToRow(bet);
+    await supabaseClient.from('bankroll_bets').upsert(row);
+  } catch (err) {
+    console.warn('Sync bet error:', err);
+  }
+}
+
+async function deleteBetFromCloud(betId) {
+  if (!supabaseClient) return;
+  try {
+    await supabaseClient.from('bankroll_bets').delete().eq('id', betId);
+  } catch (err) {
+    console.warn('Delete bet error:', err);
+  }
+}
+
+async function initBankrollCloudSync() {
+  if (!supabaseClient) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('bankroll_bets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      const cloudBets = data.map(rowToBet);
+      const localBets = JSON.parse(localStorage.getItem('top5_user_bets_v1') || '[]');
+
+      // Sinkronkan tiket lokal yang mungkin belum ada di cloud
+      localBets.forEach(lb => {
+        if (!cloudBets.some(cb => cb.id === lb.id)) {
+          cloudBets.push(lb);
+          syncBetToCloud(lb);
+        }
+      });
+
+      userBets = cloudBets;
+      localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+      renderBetKPIs();
+      renderBetHistory();
+      renderValuePicks();
+    }
+  } catch (e) {
+    console.warn('Bankroll cloud fetch failed:', e);
+  }
+
+  // Realtime subscription (Listen changes from laptop or mobile)
+  try {
+    supabaseClient.channel('realtime_bankroll_bets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bankroll_bets' }, (payload) => {
+        console.log('⚡ Realtime Cloud Event:', payload.eventType, payload);
+        if (payload.eventType === 'INSERT') {
+          const newBet = rowToBet(payload.new);
+          if (!userBets.some(b => b.id === newBet.id)) {
+            userBets.unshift(newBet);
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = rowToBet(payload.new);
+          const idx = userBets.findIndex(b => b.id === updated.id);
+          if (idx !== -1) {
+            userBets[idx] = { ...userBets[idx], ...updated };
+          } else {
+            userBets.unshift(updated);
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const delId = payload.old.id;
+          userBets = userBets.filter(b => b.id !== delId);
+        }
+        localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+        renderBetKPIs();
+        renderBetHistory();
+        renderValuePicks();
+      })
+      .subscribe();
+  } catch (err) {
+    console.warn('Realtime subscription warning:', err);
+  }
+}
+
+const CURRENT_PRO_KEY = 'a43387e489a6880487b830a06d51d8c8';
+const APISPORTS_HOST = 'https://v3.football.api-sports.io';
+const TOP10_LEAGUES = [
+  { id: 39, name: 'Premier League', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', code: 'EPL', country: 'Inggris' },
+  { id: 140, name: 'La Liga', flag: '🇪🇸', code: 'LL', country: 'Spanyol' },
+  { id: 135, name: 'Serie A', flag: '🇮🇹', code: 'SA', country: 'Italia' },
+  { id: 78, name: 'Bundesliga', flag: '🇩🇪', code: 'BL', country: 'Jerman' },
+  { id: 61, name: 'Ligue 1', flag: '🇫🇷', code: 'L1', country: 'Prancis' },
+  { id: 94, name: 'Liga Portugal', flag: '🇵🇹', code: 'LP', country: 'Portugal' },
+  { id: 88, name: 'Eredivisie', flag: '🇳🇱', code: 'ERE', country: 'Belanda' },
+  { id: 144, name: 'Belgian Pro League', flag: '🇧🇪', code: 'BPL', country: 'Belgia' },
+  { id: 203, name: 'Süper Lig', flag: '🇹🇷', code: 'TSL', country: 'Turki' },
+  { id: 71, name: 'Brasileirão', flag: '🇧🇷', code: 'BSA', country: 'Brasil' }
+];
+
+let allFixtures = [
+  {
+    "id": 1557443,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-23T19:00:00+00:00",
+    "timestamp": 1792782000,
+    "status": "NS",
+    "venue": "Portman Road",
+    "homeRank": 17,
+    "awayRank": 7,
+    "home": "Ipswich",
+    "homeLogo": "https://media.api-sports.io/football/teams/57.png",
+    "away": "Nottingham Forest",
+    "awayLogo": "https://media.api-sports.io/football/teams/65.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.1,
+      "d": 3.64,
+      "a": 2.39,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1557438,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T11:30:00+00:00",
+    "timestamp": 1792841400,
+    "status": "NS",
+    "venue": "Villa Park",
+    "homeRank": 6,
+    "awayRank": 2,
+    "home": "Aston Villa",
+    "homeLogo": "https://media.api-sports.io/football/teams/66.png",
+    "away": "Manchester City",
+    "awayLogo": "https://media.api-sports.io/football/teams/50.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 4.72,
+      "d": 4.26,
+      "a": 1.76,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1557437,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T14:00:00+00:00",
+    "timestamp": 1792850400,
+    "status": "NS",
+    "venue": "Emirates Stadium",
+    "homeRank": 1,
+    "awayRank": 15,
+    "home": "Arsenal",
+    "homeLogo": "https://media.api-sports.io/football/teams/42.png",
+    "away": "Everton",
+    "awayLogo": "https://media.api-sports.io/football/teams/45.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.43,
+      "d": 4.93,
+      "a": 8.9,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1557440,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T14:00:00+00:00",
+    "timestamp": 1792850400,
+    "status": "NS",
+    "venue": "Coventry Building Society Arena",
+    "homeRank": 19,
+    "awayRank": 8,
+    "home": "Coventry",
+    "homeLogo": "https://media.api-sports.io/football/teams/1346.png",
+    "away": "Fulham",
+    "awayLogo": "https://media.api-sports.io/football/teams/36.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.12,
+      "d": 3.61,
+      "a": 2.39,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1557439,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T16:30:00+00:00",
+    "timestamp": 1792859400,
+    "status": "NS",
+    "venue": "Stamford Bridge",
+    "homeRank": 4,
+    "awayRank": 5,
+    "home": "Chelsea",
+    "homeLogo": "https://media.api-sports.io/football/teams/49.png",
+    "away": "Tottenham",
+    "awayLogo": "https://media.api-sports.io/football/teams/47.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.81,
+      "d": 4.3,
+      "a": 4.36,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1557445,
+    "leagueId": 39,
+    "leagueName": "Premier League",
+    "leagueFlag": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+    "leagueCode": "EPL",
+    "leagueCountry": "Inggris",
+    "round": "Regular Season - 8",
+    "date": "2026-10-25T14:00:00+00:00",
+    "timestamp": 1792936800,
+    "status": "NS",
+    "venue": "Old Trafford",
+    "homeRank": 11,
+    "awayRank": 10,
+    "home": "Manchester United",
+    "homeLogo": "https://media.api-sports.io/football/teams/33.png",
+    "away": "Bournemouth",
+    "awayLogo": "https://media.api-sports.io/football/teams/35.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.91,
+      "d": 4.06,
+      "a": 4.07,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570389,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 6",
+    "date": "2026-10-21T18:00:00+00:00",
+    "timestamp": 1792605600,
+    "status": "NS",
+    "venue": "Estadio Ciudad de Valencia",
+    "homeRank": 17,
+    "awayRank": 11,
+    "home": "Levante",
+    "homeLogo": "https://media.api-sports.io/football/teams/539.png",
+    "away": "Athletic Club",
+    "awayLogo": "https://media.api-sports.io/football/teams/531.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.52,
+      "d": 3.52,
+      "a": 2.24,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570423,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 10",
+    "date": "2026-10-23T19:00:00+00:00",
+    "timestamp": 1792782000,
+    "status": "NS",
+    "venue": "Estadio Mendizorrotza",
+    "homeRank": 7,
+    "awayRank": 20,
+    "home": "Alaves",
+    "homeLogo": "https://media.api-sports.io/football/teams/542.png",
+    "away": "Malaga",
+    "awayLogo": "https://media.api-sports.io/football/teams/535.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.84,
+      "d": 3.72,
+      "a": 4.93,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570429,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T12:00:00+00:00",
+    "timestamp": 1792843200,
+    "status": "NS",
+    "venue": "Campo de Futbol de Vallecas",
+    "homeRank": 13,
+    "awayRank": 18,
+    "home": "Rayo Vallecano",
+    "homeLogo": "https://media.api-sports.io/football/teams/728.png",
+    "away": "Elche",
+    "awayLogo": "https://media.api-sports.io/football/teams/797.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.81,
+      "d": 3.94,
+      "a": 4.78,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570428,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T14:15:00+00:00",
+    "timestamp": 1792851300,
+    "status": "NS",
+    "venue": "Estadio El Sardinero",
+    "homeRank": 16,
+    "awayRank": 15,
+    "home": "Racing Santander",
+    "homeLogo": "https://media.api-sports.io/football/teams/4665.png",
+    "away": "Espanyol",
+    "awayLogo": "https://media.api-sports.io/football/teams/540.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.57,
+      "d": 3.72,
+      "a": 2.8,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570432,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T16:30:00+00:00",
+    "timestamp": 1792859400,
+    "status": "NS",
+    "venue": "Estadio de Mestalla",
+    "homeRank": 19,
+    "awayRank": 12,
+    "home": "Valencia",
+    "homeLogo": "https://media.api-sports.io/football/teams/532.png",
+    "away": "Villarreal",
+    "awayLogo": "https://media.api-sports.io/football/teams/533.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.45,
+      "d": 3.78,
+      "a": 2.17,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1570425,
+    "leagueId": 140,
+    "leagueName": "La Liga",
+    "leagueFlag": "🇪🇸",
+    "leagueCode": "LL",
+    "leagueCountry": "Spanyol",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T19:00:00+00:00",
+    "timestamp": 1792868400,
+    "status": "NS",
+    "venue": "Metropolitano Stadium",
+    "homeRank": 2,
+    "awayRank": 9,
+    "home": "Atletico Madrid",
+    "homeLogo": "https://media.api-sports.io/football/teams/530.png",
+    "away": "Deportivo La Coruna",
+    "awayLogo": "https://media.api-sports.io/football/teams/544.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.31,
+      "d": 6.48,
+      "a": 10.0,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550165,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-23T18:45:00+00:00",
+    "timestamp": 1792781100,
+    "status": "NS",
+    "venue": "Stadio Olimpico di Torino",
+    "homeRank": 10,
+    "awayRank": 14,
+    "home": "Torino",
+    "homeLogo": "https://media.api-sports.io/football/teams/503.png",
+    "away": "Monza",
+    "awayLogo": "https://media.api-sports.io/football/teams/1579.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.15,
+      "d": 3.62,
+      "a": 3.64,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550158,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T13:00:00+00:00",
+    "timestamp": 1792846800,
+    "status": "NS",
+    "venue": "Unipol Domus",
+    "homeRank": 7,
+    "awayRank": 15,
+    "home": "Cagliari",
+    "homeLogo": "https://media.api-sports.io/football/teams/490.png",
+    "away": "Bologna",
+    "awayLogo": "https://media.api-sports.io/football/teams/500.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.35,
+      "d": 3.13,
+      "a": 2.52,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550159,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T13:00:00+00:00",
+    "timestamp": 1792846800,
+    "status": "NS",
+    "venue": "Stadio Giuseppe Sinigaglia",
+    "homeRank": 5,
+    "awayRank": 13,
+    "home": "Como",
+    "homeLogo": "https://media.api-sports.io/football/teams/895.png",
+    "away": "Sassuolo",
+    "awayLogo": "https://media.api-sports.io/football/teams/488.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.49,
+      "d": 4.94,
+      "a": 7.1,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550164,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T16:00:00+00:00",
+    "timestamp": 1792857600,
+    "status": "NS",
+    "venue": "Stadio Diego Armando Maradona",
+    "homeRank": 9,
+    "awayRank": 3,
+    "home": "Napoli",
+    "homeLogo": "https://media.api-sports.io/football/teams/492.png",
+    "away": "AS Roma",
+    "awayLogo": "https://media.api-sports.io/football/teams/497.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.9,
+      "d": 3.54,
+      "a": 2.57,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550162,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T18:45:00+00:00",
+    "timestamp": 1792867500,
+    "status": "NS",
+    "venue": "Stadio Olimpico",
+    "homeRank": 2,
+    "awayRank": 19,
+    "home": "Lazio",
+    "homeLogo": "https://media.api-sports.io/football/teams/487.png",
+    "away": "Parma",
+    "awayLogo": "https://media.api-sports.io/football/teams/523.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.5,
+      "d": 4.58,
+      "a": 7.6,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1550161,
+    "leagueId": 135,
+    "leagueName": "Serie A",
+    "leagueFlag": "🇮🇹",
+    "leagueCode": "SA",
+    "leagueCountry": "Italia",
+    "round": "Regular Season - 8",
+    "date": "2026-10-25T11:30:00+00:00",
+    "timestamp": 1792927800,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 1,
+    "awayRank": 18,
+    "home": "Inter",
+    "homeLogo": "https://media.api-sports.io/football/teams/505.png",
+    "away": "Fiorentina",
+    "awayLogo": "https://media.api-sports.io/football/teams/502.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.41,
+      "d": 5.56,
+      "a": 7.9,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575196,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-23T18:30:00+00:00",
+    "timestamp": 1792780200,
+    "status": "NS",
+    "venue": "MHPArena",
+    "homeRank": 13,
+    "awayRank": 18,
+    "home": "VfB Stuttgart",
+    "homeLogo": "https://media.api-sports.io/football/teams/172.png",
+    "away": "Borussia Mönchengladbach",
+    "awayLogo": "https://media.api-sports.io/football/teams/163.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.43,
+      "d": 5.8,
+      "a": 6.98,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575200,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-24T13:30:00+00:00",
+    "timestamp": 1792848600,
+    "status": "NS",
+    "venue": "Mewa Arena",
+    "homeRank": 5,
+    "awayRank": 8,
+    "home": "FSV Mainz 05",
+    "homeLogo": "https://media.api-sports.io/football/teams/164.png",
+    "away": "Werder Bremen",
+    "awayLogo": "https://media.api-sports.io/football/teams/162.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.73,
+      "d": 4.41,
+      "a": 4.72,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575199,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-24T13:30:00+00:00",
+    "timestamp": 1792848600,
+    "status": "NS",
+    "venue": "WWK Arena",
+    "homeRank": 10,
+    "awayRank": 17,
+    "home": "FC Augsburg",
+    "homeLogo": "https://media.api-sports.io/football/teams/170.png",
+    "away": "Union Berlin",
+    "awayLogo": "https://media.api-sports.io/football/teams/182.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.96,
+      "d": 4.16,
+      "a": 3.78,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575195,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-24T13:30:00+00:00",
+    "timestamp": 1792848600,
+    "status": "NS",
+    "venue": "Red Bull Arena",
+    "homeRank": 7,
+    "awayRank": 6,
+    "home": "RB Leipzig",
+    "homeLogo": "https://media.api-sports.io/football/teams/173.png",
+    "away": "SV Elversberg",
+    "awayLogo": "https://media.api-sports.io/football/teams/1660.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.4,
+      "d": 6.02,
+      "a": 7.5,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575202,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-24T13:30:00+00:00",
+    "timestamp": 1792848600,
+    "status": "NS",
+    "venue": "Home Deluxe Arena",
+    "homeRank": 16,
+    "awayRank": 9,
+    "home": "SC Paderborn 07",
+    "homeLogo": "https://media.api-sports.io/football/teams/185.png",
+    "away": "Hamburger SV",
+    "awayLogo": "https://media.api-sports.io/football/teams/175.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.4,
+      "d": 3.92,
+      "a": 2.91,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575201,
+    "leagueId": 78,
+    "leagueName": "Bundesliga",
+    "leagueFlag": "🇩🇪",
+    "leagueCode": "BL",
+    "leagueCountry": "Jerman",
+    "round": "Regular Season - 7",
+    "date": "2026-10-24T13:30:00+00:00",
+    "timestamp": 1792848600,
+    "status": "NS",
+    "venue": "RheinEnergieStadion",
+    "homeRank": 12,
+    "awayRank": 15,
+    "home": "1. FC Köln",
+    "homeLogo": "https://media.api-sports.io/football/teams/192.png",
+    "away": "FC Schalke 04",
+    "awayLogo": "https://media.api-sports.io/football/teams/174.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.12,
+      "d": 3.98,
+      "a": 3.43,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552794,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-23T18:45:00+00:00",
+    "timestamp": 1792781100,
+    "status": "NS",
+    "venue": "Stade Francis-Le-Blé",
+    "homeRank": 7,
+    "awayRank": 6,
+    "home": "Stade Brestois 29",
+    "homeLogo": "https://media.api-sports.io/football/teams/106.png",
+    "away": "Nice",
+    "awayLogo": "https://media.api-sports.io/football/teams/84.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.31,
+      "d": 3.49,
+      "a": 3.37,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552799,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T15:15:00+00:00",
+    "timestamp": 1792854900,
+    "status": "NS",
+    "venue": "Stadium Municipal",
+    "homeRank": 10,
+    "awayRank": 17,
+    "home": "Toulouse",
+    "homeLogo": "https://media.api-sports.io/football/teams/96.png",
+    "away": "Estac Troyes",
+    "awayLogo": "https://media.api-sports.io/football/teams/110.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.71,
+      "d": 4.26,
+      "a": 5.13,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552795,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-24T18:45:00+00:00",
+    "timestamp": 1792867500,
+    "status": "NS",
+    "venue": "Stade Bollaert-Delelis",
+    "homeRank": 5,
+    "awayRank": 16,
+    "home": "Lens",
+    "homeLogo": "https://media.api-sports.io/football/teams/116.png",
+    "away": "Paris FC",
+    "awayLogo": "https://media.api-sports.io/football/teams/114.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.4,
+      "d": 3.8,
+      "a": 2.98,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552797,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-25T14:00:00+00:00",
+    "timestamp": 1792936800,
+    "status": "NS",
+    "venue": "Stade Louis II",
+    "homeRank": 2,
+    "awayRank": 4,
+    "home": "Monaco",
+    "homeLogo": "https://media.api-sports.io/football/teams/91.png",
+    "away": "Lille",
+    "awayLogo": "https://media.api-sports.io/football/teams/79.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.18,
+      "d": 3.6,
+      "a": 3.6,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552792,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-25T16:15:00+00:00",
+    "timestamp": 1792944900,
+    "status": "NS",
+    "venue": "Stade Raymond Kopa",
+    "homeRank": 13,
+    "awayRank": 14,
+    "home": "Angers",
+    "homeLogo": "https://media.api-sports.io/football/teams/77.png",
+    "away": "Lorient",
+    "awayLogo": "https://media.api-sports.io/football/teams/97.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.84,
+      "d": 3.43,
+      "a": 2.7,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552796,
+    "leagueId": 61,
+    "leagueName": "Ligue 1",
+    "leagueFlag": "🇫🇷",
+    "leagueCode": "L1",
+    "leagueCountry": "Prancis",
+    "round": "Regular Season - 8",
+    "date": "2026-10-25T16:15:00+00:00",
+    "timestamp": 1792944900,
+    "status": "NS",
+    "venue": "Orange Vélodrome",
+    "homeRank": 3,
+    "awayRank": 15,
+    "home": "Marseille",
+    "homeLogo": "https://media.api-sports.io/football/teams/81.png",
+    "away": "Le Havre",
+    "awayLogo": "https://media.api-sports.io/football/teams/111.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.61,
+      "d": 4.72,
+      "a": 5.44,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575526,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-23T19:45:00+00:00",
+    "timestamp": 1792784700,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 5,
+    "awayRank": 16,
+    "home": "Vitória SC",
+    "homeLogo": "https://media.api-sports.io/football/teams/224.png",
+    "away": "Maritimo",
+    "awayLogo": "https://media.api-sports.io/football/teams/214.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.58,
+      "d": 4.22,
+      "a": 6.26,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575518,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T14:30:00+00:00",
+    "timestamp": 1792852200,
+    "status": "NS",
+    "venue": "FC Alverca Sports Complex",
+    "homeRank": 17,
+    "awayRank": 10,
+    "home": "Alverca",
+    "homeLogo": "https://media.api-sports.io/football/teams/4724.png",
+    "away": "Arouca",
+    "awayLogo": "https://media.api-sports.io/football/teams/240.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.21,
+      "d": 3.34,
+      "a": 3.58,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575520,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T14:30:00+00:00",
+    "timestamp": 1792852200,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 14,
+    "awayRank": 8,
+    "home": "Estrela",
+    "homeLogo": "https://media.api-sports.io/football/teams/15130.png",
+    "away": "Casa Pia",
+    "awayLogo": "https://media.api-sports.io/football/teams/4716.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.76,
+      "d": 3.77,
+      "a": 5.05,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575521,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T19:30:00+00:00",
+    "timestamp": 1792870200,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 12,
+    "awayRank": 2,
+    "home": "GIL Vicente",
+    "homeLogo": "https://media.api-sports.io/football/teams/762.png",
+    "away": "FC Porto",
+    "awayLogo": "https://media.api-sports.io/football/teams/212.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 7.7,
+      "d": 4.43,
+      "a": 1.48,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575519,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-25T15:30:00+00:00",
+    "timestamp": 1792942200,
+    "status": "NS",
+    "venue": "Estadio Antonio Coimbra da Mota",
+    "homeRank": 11,
+    "awayRank": 7,
+    "home": "Estoril",
+    "homeLogo": "https://media.api-sports.io/football/teams/230.png",
+    "away": "Moreirense",
+    "awayLogo": "https://media.api-sports.io/football/teams/215.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.84,
+      "d": 3.89,
+      "a": 4.32,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1575522,
+    "leagueId": 94,
+    "leagueName": "Liga Portugal",
+    "leagueFlag": "🇵🇹",
+    "leagueCode": "LP",
+    "leagueCountry": "Portugal",
+    "round": "Regular Season - 9",
+    "date": "2026-10-25T18:00:00+00:00",
+    "timestamp": 1792951200,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 15,
+    "awayRank": 4,
+    "home": "Nacional",
+    "homeLogo": "https://media.api-sports.io/football/teams/225.png",
+    "away": "SC Braga",
+    "awayLogo": "https://media.api-sports.io/football/teams/217.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 6.1,
+      "d": 4.22,
+      "a": 1.59,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552198,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-23T18:00:00+00:00",
+    "timestamp": 1792778400,
+    "status": "NS",
+    "venue": "De Adelaarshorst",
+    "homeRank": 7,
+    "awayRank": 15,
+    "home": "GO Ahead Eagles",
+    "homeLogo": "https://media.api-sports.io/football/teams/410.png",
+    "away": "Telstar",
+    "awayLogo": "https://media.api-sports.io/football/teams/427.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.61,
+      "d": 4.28,
+      "a": 5.36,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552199,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T14:30:00+00:00",
+    "timestamp": 1792852200,
+    "status": "NS",
+    "venue": "Stadion Galgenwaard",
+    "homeRank": 2,
+    "awayRank": 13,
+    "home": "Utrecht",
+    "homeLogo": "https://media.api-sports.io/football/teams/207.png",
+    "away": "PEC Zwolle",
+    "awayLogo": "https://media.api-sports.io/football/teams/193.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.68,
+      "d": 4.28,
+      "a": 4.69,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552200,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T16:45:00+00:00",
+    "timestamp": 1792860300,
+    "status": "NS",
+    "venue": "Koning Willem II Stadion",
+    "homeRank": 12,
+    "awayRank": 16,
+    "home": "Willem II",
+    "homeLogo": "https://media.api-sports.io/football/teams/195.png",
+    "away": "Cambuur",
+    "awayLogo": "https://media.api-sports.io/football/teams/420.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.59,
+      "d": 3.76,
+      "a": 2.56,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552201,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-24T19:00:00+00:00",
+    "timestamp": 1792868400,
+    "status": "NS",
+    "venue": "WerkTalent Stadion",
+    "homeRank": 17,
+    "awayRank": 11,
+    "home": "ADO Den Haag",
+    "homeLogo": "https://media.api-sports.io/football/teams/198.png",
+    "away": "Heerenveen",
+    "awayLogo": "https://media.api-sports.io/football/teams/210.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.24,
+      "d": 3.9,
+      "a": 2.1,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552202,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-25T11:15:00+00:00",
+    "timestamp": 1792926900,
+    "status": "NS",
+    "venue": "Fortuna Sittard Stadion",
+    "homeRank": 9,
+    "awayRank": 14,
+    "home": "Fortuna Sittard",
+    "homeLogo": "https://media.api-sports.io/football/teams/205.png",
+    "away": "Excelsior",
+    "awayLogo": "https://media.api-sports.io/football/teams/196.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.5,
+      "d": 3.72,
+      "a": 2.68,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1552204,
+    "leagueId": 88,
+    "leagueName": "Eredivisie",
+    "leagueFlag": "🇳🇱",
+    "leagueCode": "ERE",
+    "leagueCountry": "Belanda",
+    "round": "Regular Season - 10",
+    "date": "2026-10-25T13:30:00+00:00",
+    "timestamp": 1792935000,
+    "status": "NS",
+    "venue": "Philips Stadion",
+    "homeRank": 1,
+    "awayRank": 4,
+    "home": "PSV Eindhoven",
+    "homeLogo": "https://media.api-sports.io/football/teams/197.png",
+    "away": "Feyenoord",
+    "awayLogo": "https://media.api-sports.io/football/teams/209.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.0,
+      "d": 4.28,
+      "a": 3.24,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1558657,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-23T18:45:00+00:00",
+    "timestamp": 1792781100,
+    "status": "NS",
+    "venue": "Guldensporen Stadion",
+    "homeRank": 13,
+    "awayRank": 6,
+    "home": "Kortrijk",
+    "homeLogo": "https://media.api-sports.io/football/teams/734.png",
+    "away": "KV Mechelen",
+    "awayLogo": "https://media.api-sports.io/football/teams/266.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.48,
+      "d": 3.55,
+      "a": 2.76,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1558653,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T14:00:00+00:00",
+    "timestamp": 1792850400,
+    "status": "NS",
+    "venue": "Bosuilstadion",
+    "homeRank": 2,
+    "awayRank": 10,
+    "home": "Antwerp",
+    "homeLogo": "https://media.api-sports.io/football/teams/740.png",
+    "away": "Charleroi",
+    "awayLogo": "https://media.api-sports.io/football/teams/736.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": null
+  },
+  {
+    "id": 1558658,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T16:15:00+00:00",
+    "timestamp": 1792858500,
+    "status": "NS",
+    "venue": "Den Dreef",
+    "homeRank": 11,
+    "awayRank": 15,
+    "home": "OH Leuven",
+    "homeLogo": "https://media.api-sports.io/football/teams/260.png",
+    "away": "Lommel United",
+    "awayLogo": "https://media.api-sports.io/football/teams/259.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": null
+  },
+  {
+    "id": 1558661,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T18:45:00+00:00",
+    "timestamp": 1792867500,
+    "status": "NS",
+    "venue": "Het Kuipje",
+    "homeRank": 8,
+    "awayRank": 14,
+    "home": "KVC Westerlo",
+    "homeLogo": "https://media.api-sports.io/football/teams/261.png",
+    "away": "SK Beveren",
+    "awayLogo": "https://media.api-sports.io/football/teams/738.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": null
+  },
+  {
+    "id": 1558659,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T18:45:00+00:00",
+    "timestamp": 1792867500,
+    "status": "NS",
+    "venue": "Easi Arena",
+    "homeRank": 16,
+    "awayRank": 12,
+    "home": "RAAL La Louvière",
+    "homeLogo": "https://media.api-sports.io/football/teams/5902.png",
+    "away": "Zulte Waregem",
+    "awayLogo": "https://media.api-sports.io/football/teams/600.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": null
+  },
+  {
+    "id": 1558655,
+    "leagueId": 144,
+    "leagueName": "Belgian Pro League",
+    "leagueFlag": "🇧🇪",
+    "leagueCode": "BPL",
+    "leagueCountry": "Belgia",
+    "round": "Regular Season - 9",
+    "date": "2026-10-25T12:30:00+00:00",
+    "timestamp": 1792931400,
+    "status": "NS",
+    "venue": "Cegeka Arena",
+    "homeRank": 1,
+    "awayRank": 7,
+    "home": "Genk",
+    "homeLogo": "https://media.api-sports.io/football/teams/742.png",
+    "away": "Standard Liege",
+    "awayLogo": "https://media.api-sports.io/football/teams/733.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.78,
+      "d": 3.86,
+      "a": 4.44,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584439,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-23T17:00:00+00:00",
+    "timestamp": 1792774800,
+    "status": "NS",
+    "venue": "Alanya Oba Stadium",
+    "homeRank": 9,
+    "awayRank": 8,
+    "home": "Alanyaspor",
+    "homeLogo": "https://media.api-sports.io/football/teams/996.png",
+    "away": "Kocaelispor",
+    "awayLogo": "https://media.api-sports.io/football/teams/7411.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.94,
+      "d": 3.52,
+      "a": 4.32,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584441,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T10:30:00+00:00",
+    "timestamp": 1792837800,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 5,
+    "awayRank": 10,
+    "home": "Eyüpspor",
+    "homeLogo": "https://media.api-sports.io/football/teams/3588.png",
+    "away": "Kasımpaşa",
+    "awayLogo": "https://media.api-sports.io/football/teams/1004.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 6.1,
+      "d": 4.13,
+      "a": 1.6,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584443,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T13:00:00+00:00",
+    "timestamp": 1792846800,
+    "status": "NS",
+    "venue": "Gaziantep Stadyumu",
+    "homeRank": 14,
+    "awayRank": 16,
+    "home": "Gaziantep FK",
+    "homeLogo": "https://media.api-sports.io/football/teams/3573.png",
+    "away": "Erzurumspor FK",
+    "awayLogo": "https://media.api-sports.io/football/teams/1009.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.3,
+      "d": 3.03,
+      "a": 3.76,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584447,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-24T16:00:00+00:00",
+    "timestamp": 1792857600,
+    "status": "NS",
+    "venue": "Samsun 19 Mayis Stadyumu",
+    "homeRank": 3,
+    "awayRank": 17,
+    "home": "Samsunspor",
+    "homeLogo": "https://media.api-sports.io/football/teams/3603.png",
+    "away": "Amed",
+    "awayLogo": "https://media.api-sports.io/football/teams/3579.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 3.0,
+      "d": 3.58,
+      "a": 2.39,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584445,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-25T13:00:00+00:00",
+    "timestamp": 1792933200,
+    "status": "NS",
+    "venue": "Konya Buyuksehir Belediye Stadium",
+    "homeRank": 11,
+    "awayRank": 15,
+    "home": "Konyaspor",
+    "homeLogo": "https://media.api-sports.io/football/teams/607.png",
+    "away": "Gençlerbirliği S.K.",
+    "awayLogo": "https://media.api-sports.io/football/teams/997.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.91,
+      "d": 3.66,
+      "a": 4.27,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1584444,
+    "leagueId": 203,
+    "leagueName": "Süper Lig",
+    "leagueFlag": "🇹🇷",
+    "leagueCode": "TSL",
+    "leagueCountry": "Turki",
+    "round": "Regular Season - 9",
+    "date": "2026-10-25T16:00:00+00:00",
+    "timestamp": 1792944000,
+    "status": "NS",
+    "venue": null,
+    "homeRank": 6,
+    "awayRank": 18,
+    "home": "Göztepe",
+    "homeLogo": "https://media.api-sports.io/football/teams/994.png",
+    "away": "Çorum FK",
+    "awayLogo": "https://media.api-sports.io/football/teams/6343.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.22,
+      "d": 3.77,
+      "a": 3.16,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492422,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-23T23:00:00+00:00",
+    "timestamp": 1792796400,
+    "status": "NS",
+    "venue": "Estádio Mineirão",
+    "homeRank": 7,
+    "awayRank": 17,
+    "home": "Cruzeiro",
+    "homeLogo": "https://media.api-sports.io/football/teams/135.png",
+    "away": "Remo",
+    "awayLogo": "https://media.api-sports.io/football/teams/1198.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.37,
+      "d": 5.33,
+      "a": 8.15,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492424,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-24T19:30:00+00:00",
+    "timestamp": 1792870200,
+    "status": "NS",
+    "venue": "Estádio Beira Rio",
+    "homeRank": 4,
+    "awayRank": 1,
+    "home": "Internacional",
+    "homeLogo": "https://media.api-sports.io/football/teams/119.png",
+    "away": "Botafogo",
+    "awayLogo": "https://media.api-sports.io/football/teams/120.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.01,
+      "d": 3.61,
+      "a": 3.74,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492429,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-24T19:30:00+00:00",
+    "timestamp": 1792870200,
+    "status": "NS",
+    "venue": "Barradao",
+    "homeRank": 15,
+    "awayRank": 8,
+    "home": "Vitoria",
+    "homeLogo": "https://media.api-sports.io/football/teams/136.png",
+    "away": "Atletico Paranaense",
+    "awayLogo": "https://media.api-sports.io/football/teams/134.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.64,
+      "d": 3.38,
+      "a": 2.72,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492425,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-24T19:30:00+00:00",
+    "timestamp": 1792870200,
+    "status": "NS",
+    "venue": "José Maria de Campos Maia",
+    "homeRank": 14,
+    "awayRank": 6,
+    "home": "Mirassol",
+    "homeLogo": "https://media.api-sports.io/football/teams/7848.png",
+    "away": "Sao Paulo",
+    "awayLogo": "https://media.api-sports.io/football/teams/126.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 2.27,
+      "d": 3.34,
+      "a": 3.3,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492426,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-24T21:30:00+00:00",
+    "timestamp": 1792877400,
+    "status": "NS",
+    "venue": "Arena Barueri",
+    "homeRank": 2,
+    "awayRank": 11,
+    "home": "Palmeiras",
+    "homeLogo": "https://media.api-sports.io/football/teams/121.png",
+    "away": "RB Bragantino",
+    "awayLogo": "https://media.api-sports.io/football/teams/794.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.59,
+      "d": 4.18,
+      "a": 5.77,
+      "bookmaker": "1xBet"
+    }
+  },
+  {
+    "id": 1492428,
+    "leagueId": 71,
+    "leagueName": "Brasileirão",
+    "leagueFlag": "🇧🇷",
+    "leagueCode": "BSA",
+    "leagueCountry": "Brasil",
+    "round": "Regular Season - 32",
+    "date": "2026-10-24T21:30:00+00:00",
+    "timestamp": 1792877400,
+    "status": "NS",
+    "venue": "São Januário",
+    "homeRank": 10,
+    "awayRank": 13,
+    "home": "Vasco DA Gama",
+    "homeLogo": "https://media.api-sports.io/football/teams/133.png",
+    "away": "Corinthians",
+    "awayLogo": "https://media.api-sports.io/football/teams/131.png",
+    "homeScore": null,
+    "awayScore": null,
+    "odds": {
+      "h": 1.76,
+      "d": 3.76,
+      "a": 4.8,
+      "bookmaker": "1xBet"
+    }
+  }
+];
+// Urutkan seluruh fixture dari tanggal & jam terdekat
+allFixtures.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+
+// ══════════════════════════════════════════════
+// KLASEMEN & PERINGKAT RESMI TOP 10 LIGA DUNIA
+// ══════════════════════════════════════════════
+const TEAM_STANDINGS = {
+  "Manchester City": 1,
+  "Arsenal": 2,
+  "Brighton": 3,
+  "Chelsea": 4,
+  "Liverpool": 5,
+  "Brentford": 6,
+  "Leeds": 7,
+  "Everton": 8,
+  "Hull City": 9,
+  "Ipswich": 10,
+  "Newcastle": 11,
+  "Aston Villa": 12,
+  "Manchester United": 13,
+  "Crystal Palace": 14,
+  "Bournemouth": 15,
+  "Tottenham": 16,
+  "Coventry": 17,
+  "Fulham": 18,
+  "Nottingham Forest": 19,
+  "Sunderland": 20,
+  "Barcelona": 1,
+  "Atletico Madrid": 2,
+  "Real Madrid": 3,
+  "Real Betis": 4,
+  "Real Sociedad": 5,
+  "Sevilla": 6,
+  "Alaves": 7,
+  "Celta Vigo": 8,
+  "Deportivo La Coruna": 9,
+  "Osasuna": 10,
+  "Athletic Club": 11,
+  "Villarreal": 12,
+  "Rayo Vallecano": 13,
+  "Getafe": 14,
+  "Espanyol": 15,
+  "Racing Santander": 16,
+  "Levante": 17,
+  "Elche": 18,
+  "Valencia": 19,
+  "Malaga": 20,
+  "Inter": 1,
+  "Lazio": 2,
+  "AS Roma": 3,
+  "AC Milan": 4,
+  "Como": 5,
+  "Frosinone": 6,
+  "Cagliari": 7,
+  "Juventus": 8,
+  "Napoli": 9,
+  "Torino": 10,
+  "Atalanta": 11,
+  "Lecce": 12,
+  "Sassuolo": 13,
+  "Monza": 14,
+  "Bologna": 15,
+  "Udinese": 16,
+  "Genoa": 17,
+  "Fiorentina": 18,
+  "Parma": 19,
+  "Venezia": 20,
+  "Bayern München": 1,
+  "Borussia Dortmund": 2,
+  "SC Freiburg": 3,
+  "Bayer Leverkusen": 4,
+  "FSV Mainz 05": 5,
+  "SV Elversberg": 6,
+  "RB Leipzig": 7,
+  "Werder Bremen": 8,
+  "Hamburger SV": 9,
+  "FC Augsburg": 10,
+  "Eintracht Frankfurt": 11,
+  "1. FC Köln": 12,
+  "VfB Stuttgart": 13,
+  "1899 Hoffenheim": 14,
+  "FC Schalke 04": 15,
+  "SC Paderborn 07": 16,
+  "Union Berlin": 17,
+  "Borussia Mönchengladbach": 18,
+  "Lyon": 1,
+  "Paris Saint Germain": 2,
+  "Paris FC": 3,
+  "Lille": 4,
+  "Monaco": 5,
+  "Rennes": 6,
+  "Lorient": 7,
+  "Lens": 8,
+  "Marseille": 9,
+  "Stade Brestois 29": 10,
+  "Toulouse": 11,
+  "Auxerre": 12,
+  "Nice": 13,
+  "Strasbourg": 14,
+  "Angers": 15,
+  "Le Mans": 16,
+  "Estac Troyes": 17,
+  "Le Havre": 18,
+  "FC Porto": 1,
+  "Benfica": 2,
+  "Sporting CP": 3,
+  "Santa Clara": 4,
+  "Arouca": 5,
+  "GIL Vicente": 6,
+  "Academico Viseu": 7,
+  "Alverca": 8,
+  "SC Braga": 9,
+  "Estrela": 10,
+  "Maritimo": 11,
+  "Moreirense": 12,
+  "Famalicao": 13,
+  "Rio Ave": 14,
+  "Vitória SC": 15,
+  "Nacional": 16,
+  "Casa Pia": 17,
+  "Estoril": 18,
+  "Feyenoord": 1,
+  "AZ Alkmaar": 2,
+  "PSV Eindhoven": 3,
+  "Ajax": 4,
+  "Twente": 5,
+  "Fortuna Sittard": 6,
+  "Groningen": 7,
+  "Heerenveen": 8,
+  "GO Ahead Eagles": 9,
+  "Excelsior": 10,
+  "Utrecht": 11,
+  "NEC Nijmegen": 12,
+  "Sparta Rotterdam": 13,
+  "Cambuur": 14,
+  "PEC Zwolle": 15,
+  "Telstar": 16,
+  "ADO Den Haag": 17,
+  "Willem II": 18,
+  "Gent": 1,
+  "Club Brugge KV": 2,
+  "Charleroi": 3,
+  "Union St. Gilloise": 4,
+  "Anderlecht": 5,
+  "KVC Westerlo": 6,
+  "Genk": 7,
+  "Zulte Waregem": 8,
+  "Standard Liege": 9,
+  "Lommel United": 10,
+  "SK Beveren": 11,
+  "St. Truiden": 12,
+  "Antwerp": 13,
+  "KV Mechelen": 14,
+  "OH Leuven": 15,
+  "RAAL La Louvière": 16,
+  "Kortrijk": 17,
+  "Cercle Brugge": 18,
+  "Galatasaray": 1,
+  "Amed": 2,
+  "Fenerbahçe": 3,
+  "Trabzonspor": 4,
+  "Beşiktaş": 5,
+  "Çorum FK": 6,
+  "Kasımpaşa": 7,
+  "Kocaelispor": 8,
+  "Alanyaspor": 9,
+  "Başakşehir": 10,
+  "Erzurumspor FK": 11,
+  "Rizespor": 12,
+  "Göztepe": 13,
+  "Gaziantep FK": 14,
+  "Gençlerbirliği S.K.": 15,
+  "Konyaspor": 16,
+  "Samsunspor": 17,
+  "Eyüpspor": 18,
+  "Flamengo": 1,
+  "Palmeiras": 2,
+  "Atletico Paranaense": 3,
+  "Cruzeiro": 4,
+  "Fluminense": 5,
+  "Atletico-MG": 6,
+  "Bahia": 7,
+  "Santos": 8,
+  "Sao Paulo": 9,
+  "RB Bragantino": 10,
+  "Botafogo": 11,
+  "Coritiba": 12,
+  "Vitoria": 13,
+  "Mirassol": 14,
+  "Vasco DA Gama": 15,
+  "Corinthians": 16,
+  "Internacional": 1,
+  "Gremio": 18,
+  "Remo": 19,
+  "Chapecoense-sc": 20
+};
+
+function getTeamRank(teamName) {
+  if (!teamName) return '';
+  const clean = teamName.trim();
+  if (TEAM_STANDINGS[clean] !== undefined) return TEAM_STANDINGS[clean];
+  for (const k in TEAM_STANDINGS) {
+    if (k.toLowerCase() === clean.toLowerCase()) return TEAM_STANDINGS[k];
+  }
+  return 10;
+}
+
+function formatMatchTitle(f) {
+  if (!f) return '';
+  const hr = getTeamRank(f.home) || f.homeRank || '';
+  const ar = getTeamRank(f.away) || f.awayRank || '';
+  return `${f.home} (${hr}) vs ${f.away} (${ar})`;
+}
+
+let activeLeagueFilter = 'all';
+let currentStrategyPreset = 'home_fortress';
+let userBets = JSON.parse(localStorage.getItem('top5_user_bets_v1') || '[]');
+let currentCompoundStep = 1;
+let currentCompoundBankroll = 100000;
+let currentCompoundSolution = 1;
+
+// ══════════════════════════════════════════════
+// STRATEGY PRESETS
+// ══════════════════════════════════════════════
+const STRATEGY_PRESETS = {
+  'home_fortress': {
+    id: 'home_fortress',
+    name: 'Benteng Kandang Dominan',
+    shortName: 'Benteng Kandang',
+    icon: '🏰',
+    badge: 'WIN RATE & ODDS TINGGI',
+    badgeClass: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300',
+    winRate: '64.2%',
+    avgOdds: '1.88',
+    roi: '+18.5%',
+    desc: 'Memaksimalkan keunggulan kandang tim dominan Eropa (Man City, Real Madrid, Inter, Bayern, PSG).'
+  },
+  'favorit_emas': {
+    id: 'favorit_emas',
+    name: 'Favorit Emas (Balanced)',
+    shortName: 'Favorit Emas',
+    icon: '🌟',
+    badge: 'STABIL & KONSISTEN',
+    badgeClass: 'bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300',
+    winRate: '62.5%',
+    avgOdds: '1.92',
+    roi: '+16.2%',
+    desc: 'Pilihan seimbang tim unggulan Eropa dengan tren form 5 laga terakhir stabil & EV positif.'
+  },
+  'double_chance': {
+    id: 'double_chance',
+    name: 'Pengaman Underdog (1X / X2)',
+    shortName: 'Double Chance',
+    icon: '🛡️',
+    badge: 'SAFETY NET (2 HASIL)',
+    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300',
+    winRate: '71.0%',
+    avgOdds: '1.55',
+    roi: '+12.4%',
+    desc: 'Peluang tembus tertinggi karena menang jika menang ATAU seri (2 dari 3 skenario hasil).'
+  },
+  'dnb': {
+    id: 'dnb',
+    name: 'Draw No Bet (DNB - Seri Refund)',
+    shortName: 'DNB Refund',
+    icon: '🔄',
+    badge: 'BEBAS RISIKO DRAW',
+    badgeClass: 'bg-teal-100 text-teal-800 dark:bg-teal-950 dark:text-teal-300',
+    winRate: '56.5%',
+    avgOdds: '1.65',
+    roi: '+9.2%',
+    desc: 'Pilihan cerdas mengeliminasi risiko seri: jika imbang modal kembali utuh 100% (Refund).'
+  },
+  'high_odds_sniper': {
+    id: 'high_odds_sniper',
+    name: 'High-Yield Value Sniper',
+    shortName: 'High Odds Sniper',
+    icon: '🎯',
+    badge: 'ODDS TERTINGGI (AGRESIF)',
+    badgeClass: 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300',
+    winRate: '48.0%',
+    avgOdds: '2.25',
+    roi: '+3.4%',
+    desc: 'Membidik odds tinggi @1.85 s/d @3.50+ saat bandar meremehkan tim dengan edge matematis.'
+  }
+};
+
+// ══════════════════════════════════════════════
+// POISSON & STATISTIK REKOMENDASI MODEL (FORM 5 LAGA 55% + SEMUSIM 45%)
+// ══════════════════════════════════════════════
+const TEAM_STATS = {
+  "Manchester City": {
+    "played": 7,
+    "gf": 19,
+    "ga": 7,
+    "pts": 21,
+    "form5": {
+      "gf": 13,
+      "ga": 5,
+      "form": "W-W-W-W-W"
+    }
+  },
+  "Arsenal": {
+    "played": 7,
+    "gf": 11,
+    "ga": 5,
+    "pts": 18,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "W-W-L-W-W"
+    }
+  },
+  "Brighton": {
+    "played": 7,
+    "gf": 23,
+    "ga": 5,
+    "pts": 16,
+    "form5": {
+      "gf": 16,
+      "ga": 1,
+      "form": "W-W-W-W-D"
+    }
+  },
+  "Chelsea": {
+    "played": 7,
+    "gf": 17,
+    "ga": 13,
+    "pts": 13,
+    "form5": {
+      "gf": 10,
+      "ga": 8,
+      "form": "W-W-L-D-L"
+    }
+  },
+  "Liverpool": {
+    "played": 7,
+    "gf": 9,
+    "ga": 8,
+    "pts": 12,
+    "form5": {
+      "gf": 5,
+      "ga": 4,
+      "form": "W-L-W-D-W"
+    }
+  },
+  "Brentford": {
+    "played": 7,
+    "gf": 13,
+    "ga": 8,
+    "pts": 10,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "L-D-W-D-D"
+    }
+  },
+  "Leeds": {
+    "played": 7,
+    "gf": 9,
+    "ga": 6,
+    "pts": 10,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "D-L-D-W-D"
+    }
+  },
+  "Everton": {
+    "played": 7,
+    "gf": 8,
+    "ga": 7,
+    "pts": 10,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "L-D-W-D-D"
+    }
+  },
+  "Hull City": {
+    "played": 7,
+    "gf": 8,
+    "ga": 7,
+    "pts": 9,
+    "form5": {
+      "gf": 5,
+      "ga": 7,
+      "form": "L-D-L-D-D"
+    }
+  },
+  "Ipswich": {
+    "played": 7,
+    "gf": 11,
+    "ga": 15,
+    "pts": 9,
+    "form5": {
+      "gf": 7,
+      "ga": 9,
+      "form": "L-W-L-W-L"
+    }
+  },
+  "Newcastle": {
+    "played": 7,
+    "gf": 10,
+    "ga": 14,
+    "pts": 8,
+    "form5": {
+      "gf": 6,
+      "ga": 12,
+      "form": "L-L-W-L-D"
+    }
+  },
+  "Aston Villa": {
+    "played": 7,
+    "gf": 7,
+    "ga": 11,
+    "pts": 8,
+    "form5": {
+      "gf": 7,
+      "ga": 6,
+      "form": "W-D-W-L-D"
+    }
+  },
+  "Manchester United": {
+    "played": 7,
+    "gf": 10,
+    "ga": 10,
+    "pts": 7,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "D-D-D-L-D"
+    }
+  },
+  "Crystal Palace": {
+    "played": 7,
+    "gf": 9,
+    "ga": 17,
+    "pts": 7,
+    "form5": {
+      "gf": 8,
+      "ga": 11,
+      "form": "L-W-D-L-W"
+    }
+  },
+  "Bournemouth": {
+    "played": 7,
+    "gf": 9,
+    "ga": 13,
+    "pts": 6,
+    "form5": {
+      "gf": 7,
+      "ga": 10,
+      "form": "W-L-L-D-D"
+    }
+  },
+  "Tottenham": {
+    "played": 7,
+    "gf": 6,
+    "ga": 10,
+    "pts": 6,
+    "form5": {
+      "gf": 6,
+      "ga": 5,
+      "form": "W-D-L-D-D"
+    }
+  },
+  "Coventry": {
+    "played": 7,
+    "gf": 6,
+    "ga": 14,
+    "pts": 6,
+    "form5": {
+      "gf": 6,
+      "ga": 10,
+      "form": "L-W-W-L-L"
+    }
+  },
+  "Fulham": {
+    "played": 7,
+    "gf": 7,
+    "ga": 10,
+    "pts": 5,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "W-L-D-D-L"
+    }
+  },
+  "Nottingham Forest": {
+    "played": 7,
+    "gf": 5,
+    "ga": 9,
+    "pts": 5,
+    "form5": {
+      "gf": 3,
+      "ga": 6,
+      "form": "L-L-L-W-D"
+    }
+  },
+  "Sunderland": {
+    "played": 7,
+    "gf": 6,
+    "ga": 14,
+    "pts": 4,
+    "form5": {
+      "gf": 4,
+      "ga": 12,
+      "form": "L-L-L-L-D"
+    }
+  },
+  "Barcelona": {
+    "played": 9,
+    "gf": 39,
+    "ga": 9,
+    "pts": 27,
+    "form5": {
+      "gf": 22,
+      "ga": 7,
+      "form": "W-W-W-W-W"
+    }
+  },
+  "Atletico Madrid": {
+    "played": 9,
+    "gf": 19,
+    "ga": 8,
+    "pts": 22,
+    "form5": {
+      "gf": 12,
+      "ga": 2,
+      "form": "W-W-W-W-W"
+    }
+  },
+  "Real Madrid": {
+    "played": 9,
+    "gf": 23,
+    "ga": 9,
+    "pts": 21,
+    "form5": {
+      "gf": 13,
+      "ga": 6,
+      "form": "W-W-L-W-W"
+    }
+  },
+  "Real Betis": {
+    "played": 9,
+    "gf": 16,
+    "ga": 14,
+    "pts": 19,
+    "form5": {
+      "gf": 11,
+      "ga": 9,
+      "form": "L-W-D-W-W"
+    }
+  },
+  "Real Sociedad": {
+    "played": 9,
+    "gf": 17,
+    "ga": 17,
+    "pts": 16,
+    "form5": {
+      "gf": 14,
+      "ga": 11,
+      "form": "W-W-W-L-W"
+    }
+  },
+  "Sevilla": {
+    "played": 9,
+    "gf": 14,
+    "ga": 16,
+    "pts": 14,
+    "form5": {
+      "gf": 7,
+      "ga": 10,
+      "form": "L-D-L-W-W"
+    }
+  },
+  "Alaves": {
+    "played": 9,
+    "gf": 13,
+    "ga": 10,
+    "pts": 11,
+    "form5": {
+      "gf": 3,
+      "ga": 7,
+      "form": "L-L-D-L-L"
+    }
+  },
+  "Celta Vigo": {
+    "played": 9,
+    "gf": 10,
+    "ga": 7,
+    "pts": 11,
+    "form5": {
+      "gf": 9,
+      "ga": 3,
+      "form": "W-D-W-D-D"
+    }
+  },
+  "Deportivo La Coruna": {
+    "played": 9,
+    "gf": 13,
+    "ga": 12,
+    "pts": 11,
+    "form5": {
+      "gf": 5,
+      "ga": 7,
+      "form": "D-L-D-L-D"
+    }
+  },
+  "Osasuna": {
+    "played": 9,
+    "gf": 10,
+    "ga": 18,
+    "pts": 11,
+    "form5": {
+      "gf": 5,
+      "ga": 12,
+      "form": "W-L-D-L-L"
+    }
+  },
+  "Athletic Club": {
+    "played": 7,
+    "gf": 7,
+    "ga": 6,
+    "pts": 9,
+    "form5": {
+      "gf": 6,
+      "ga": 1,
+      "form": "D-D-D-W-W"
+    }
+  },
+  "Villarreal": {
+    "played": 9,
+    "gf": 13,
+    "ga": 13,
+    "pts": 9,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "D-L-W-W-L"
+    }
+  },
+  "Rayo Vallecano": {
+    "played": 8,
+    "gf": 12,
+    "ga": 17,
+    "pts": 9,
+    "form5": {
+      "gf": 8,
+      "ga": 9,
+      "form": "D-D-W-L-W"
+    }
+  },
+  "Getafe": {
+    "played": 9,
+    "gf": 5,
+    "ga": 11,
+    "pts": 9,
+    "form5": {
+      "gf": 3,
+      "ga": 6,
+      "form": "D-L-W-L-D"
+    }
+  },
+  "Espanyol": {
+    "played": 9,
+    "gf": 11,
+    "ga": 12,
+    "pts": 8,
+    "form5": {
+      "gf": 5,
+      "ga": 7,
+      "form": "L-D-L-L-W"
+    }
+  },
+  "Racing Santander": {
+    "played": 9,
+    "gf": 13,
+    "ga": 25,
+    "pts": 8,
+    "form5": {
+      "gf": 6,
+      "ga": 17,
+      "form": "L-D-L-L-W"
+    }
+  },
+  "Levante": {
+    "played": 8,
+    "gf": 12,
+    "ga": 16,
+    "pts": 7,
+    "form5": {
+      "gf": 7,
+      "ga": 11,
+      "form": "D-D-L-L-D"
+    }
+  },
+  "Elche": {
+    "played": 9,
+    "gf": 11,
+    "ga": 17,
+    "pts": 7,
+    "form5": {
+      "gf": 6,
+      "ga": 5,
+      "form": "D-D-W-L-D"
+    }
+  },
+  "Valencia": {
+    "played": 9,
+    "gf": 6,
+    "ga": 15,
+    "pts": 6,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "D-D-L-W-L"
+    }
+  },
+  "Malaga": {
+    "played": 9,
+    "gf": 6,
+    "ga": 18,
+    "pts": 4,
+    "form5": {
+      "gf": 5,
+      "ga": 11,
+      "form": "L-D-L-L-D"
+    }
+  },
+  "Inter": {
+    "played": 7,
+    "gf": 21,
+    "ga": 9,
+    "pts": 19,
+    "form5": {
+      "gf": 16,
+      "ga": 8,
+      "form": "W-W-D-W-W"
+    }
+  },
+  "Lazio": {
+    "played": 7,
+    "gf": 14,
+    "ga": 4,
+    "pts": 19,
+    "form5": {
+      "gf": 12,
+      "ga": 4,
+      "form": "W-W-W-D-W"
+    }
+  },
+  "AS Roma": {
+    "played": 7,
+    "gf": 16,
+    "ga": 3,
+    "pts": 17,
+    "form5": {
+      "gf": 8,
+      "ga": 3,
+      "form": "W-D-D-W-W"
+    }
+  },
+  "AC Milan": {
+    "played": 7,
+    "gf": 14,
+    "ga": 7,
+    "pts": 15,
+    "form5": {
+      "gf": 10,
+      "ga": 6,
+      "form": "W-D-W-D-D"
+    }
+  },
+  "Como": {
+    "played": 7,
+    "gf": 12,
+    "ga": 7,
+    "pts": 14,
+    "form5": {
+      "gf": 9,
+      "ga": 5,
+      "form": "W-D-L-W-W"
+    }
+  },
+  "Frosinone": {
+    "played": 7,
+    "gf": 13,
+    "ga": 9,
+    "pts": 13,
+    "form5": {
+      "gf": 10,
+      "ga": 8,
+      "form": "W-L-W-D-W"
+    }
+  },
+  "Cagliari": {
+    "played": 7,
+    "gf": 6,
+    "ga": 7,
+    "pts": 13,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "L-D-W-W-W"
+    }
+  },
+  "Juventus": {
+    "played": 7,
+    "gf": 9,
+    "ga": 8,
+    "pts": 11,
+    "form5": {
+      "gf": 6,
+      "ga": 8,
+      "form": "L-D-W-L-D"
+    }
+  },
+  "Napoli": {
+    "played": 7,
+    "gf": 10,
+    "ga": 7,
+    "pts": 10,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "L-W-D-W-L"
+    }
+  },
+  "Torino": {
+    "played": 7,
+    "gf": 10,
+    "ga": 9,
+    "pts": 10,
+    "form5": {
+      "gf": 8,
+      "ga": 5,
+      "form": "W-W-D-L-W"
+    }
+  },
+  "Atalanta": {
+    "played": 7,
+    "gf": 10,
+    "ga": 11,
+    "pts": 9,
+    "form5": {
+      "gf": 7,
+      "ga": 10,
+      "form": "L-W-L-L-L"
+    }
+  },
+  "Lecce": {
+    "played": 7,
+    "gf": 9,
+    "ga": 12,
+    "pts": 9,
+    "form5": {
+      "gf": 7,
+      "ga": 8,
+      "form": "W-L-L-W-L"
+    }
+  },
+  "Sassuolo": {
+    "played": 7,
+    "gf": 12,
+    "ga": 14,
+    "pts": 8,
+    "form5": {
+      "gf": 9,
+      "ga": 11,
+      "form": "L-D-L-W-D"
+    }
+  },
+  "Monza": {
+    "played": 7,
+    "gf": 13,
+    "ga": 15,
+    "pts": 7,
+    "form5": {
+      "gf": 10,
+      "ga": 8,
+      "form": "W-L-W-L-D"
+    }
+  },
+  "Bologna": {
+    "played": 7,
+    "gf": 6,
+    "ga": 10,
+    "pts": 5,
+    "form5": {
+      "gf": 6,
+      "ga": 8,
+      "form": "L-W-D-L-D"
+    }
+  },
+  "Udinese": {
+    "played": 7,
+    "gf": 9,
+    "ga": 16,
+    "pts": 4,
+    "form5": {
+      "gf": 5,
+      "ga": 13,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Genoa": {
+    "played": 7,
+    "gf": 5,
+    "ga": 13,
+    "pts": 4,
+    "form5": {
+      "gf": 5,
+      "ga": 10,
+      "form": "L-W-L-D-L"
+    }
+  },
+  "Fiorentina": {
+    "played": 7,
+    "gf": 8,
+    "ga": 17,
+    "pts": 4,
+    "form5": {
+      "gf": 8,
+      "ga": 10,
+      "form": "L-L-D-W-L"
+    }
+  },
+  "Parma": {
+    "played": 7,
+    "gf": 4,
+    "ga": 13,
+    "pts": 4,
+    "form5": {
+      "gf": 4,
+      "ga": 10,
+      "form": "L-L-W-L-D"
+    }
+  },
+  "Venezia": {
+    "played": 7,
+    "gf": 6,
+    "ga": 16,
+    "pts": 3,
+    "form5": {
+      "gf": 6,
+      "ga": 12,
+      "form": "W-L-L-L-L"
+    }
+  },
+  "Bayern München": {
+    "played": 6,
+    "gf": 22,
+    "ga": 5,
+    "pts": 14,
+    "form5": {
+      "gf": 17,
+      "ga": 4,
+      "form": "W-D-W-W-D"
+    }
+  },
+  "Borussia Dortmund": {
+    "played": 6,
+    "gf": 11,
+    "ga": 4,
+    "pts": 14,
+    "form5": {
+      "gf": 9,
+      "ga": 4,
+      "form": "D-D-W-W-W"
+    }
+  },
+  "SC Freiburg": {
+    "played": 6,
+    "gf": 15,
+    "ga": 6,
+    "pts": 13,
+    "form5": {
+      "gf": 11,
+      "ga": 5,
+      "form": "L-W-D-W-W"
+    }
+  },
+  "Bayer Leverkusen": {
+    "played": 6,
+    "gf": 16,
+    "ga": 9,
+    "pts": 13,
+    "form5": {
+      "gf": 14,
+      "ga": 6,
+      "form": "W-W-W-D-W"
+    }
+  },
+  "FSV Mainz 05": {
+    "played": 6,
+    "gf": 14,
+    "ga": 10,
+    "pts": 10,
+    "form5": {
+      "gf": 14,
+      "ga": 10,
+      "form": "W-L-W-L-W"
+    }
+  },
+  "SV Elversberg": {
+    "played": 6,
+    "gf": 12,
+    "ga": 11,
+    "pts": 10,
+    "form5": {
+      "gf": 9,
+      "ga": 9,
+      "form": "W-L-D-L-W"
+    }
+  },
+  "RB Leipzig": {
+    "played": 6,
+    "gf": 16,
+    "ga": 11,
+    "pts": 9,
+    "form5": {
+      "gf": 13,
+      "ga": 11,
+      "form": "L-W-L-W-L"
+    }
+  },
+  "Werder Bremen": {
+    "played": 6,
+    "gf": 12,
+    "ga": 12,
+    "pts": 9,
+    "form5": {
+      "gf": 11,
+      "ga": 8,
+      "form": "D-D-W-D-W"
+    }
+  },
+  "Hamburger SV": {
+    "played": 6,
+    "gf": 6,
+    "ga": 15,
+    "pts": 9,
+    "form5": {
+      "gf": 6,
+      "ga": 13,
+      "form": "W-W-W-L-L"
+    }
+  },
+  "FC Augsburg": {
+    "played": 6,
+    "gf": 16,
+    "ga": 12,
+    "pts": 8,
+    "form5": {
+      "gf": 13,
+      "ga": 12,
+      "form": "L-D-L-D-W"
+    }
+  },
+  "Eintracht Frankfurt": {
+    "played": 6,
+    "gf": 10,
+    "ga": 16,
+    "pts": 8,
+    "form5": {
+      "gf": 7,
+      "ga": 13,
+      "form": "W-L-D-W-L"
+    }
+  },
+  "1. FC Köln": {
+    "played": 6,
+    "gf": 8,
+    "ga": 11,
+    "pts": 7,
+    "form5": {
+      "gf": 5,
+      "ga": 9,
+      "form": "L-W-L-D-L"
+    }
+  },
+  "VfB Stuttgart": {
+    "played": 6,
+    "gf": 8,
+    "ga": 10,
+    "pts": 6,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "L-W-L-L-W"
+    }
+  },
+  "1899 Hoffenheim": {
+    "played": 6,
+    "gf": 11,
+    "ga": 14,
+    "pts": 6,
+    "form5": {
+      "gf": 9,
+      "ga": 11,
+      "form": "W-L-L-W-L"
+    }
+  },
+  "FC Schalke 04": {
+    "played": 6,
+    "gf": 4,
+    "ga": 7,
+    "pts": 5,
+    "form5": {
+      "gf": 4,
+      "ga": 4,
+      "form": "L-L-D-W-D"
+    }
+  },
+  "SC Paderborn 07": {
+    "played": 6,
+    "gf": 5,
+    "ga": 9,
+    "pts": 5,
+    "form5": {
+      "gf": 5,
+      "ga": 9,
+      "form": "D-L-W-L-L"
+    }
+  },
+  "Union Berlin": {
+    "played": 6,
+    "gf": 5,
+    "ga": 17,
+    "pts": 5,
+    "form5": {
+      "gf": 2,
+      "ga": 14,
+      "form": "D-W-L-L-L"
+    }
+  },
+  "Borussia Mönchengladbach": {
+    "played": 6,
+    "gf": 8,
+    "ga": 20,
+    "pts": 0,
+    "form5": {
+      "gf": 8,
+      "ga": 17,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Lyon": {
+    "played": 7,
+    "gf": 13,
+    "ga": 5,
+    "pts": 14,
+    "form5": {
+      "gf": 10,
+      "ga": 4,
+      "form": "W-L-W-D-W"
+    }
+  },
+  "Paris Saint Germain": {
+    "played": 7,
+    "gf": 14,
+    "ga": 9,
+    "pts": 14,
+    "form5": {
+      "gf": 10,
+      "ga": 5,
+      "form": "W-W-W-W-L"
+    }
+  },
+  "Paris FC": {
+    "played": 7,
+    "gf": 12,
+    "ga": 7,
+    "pts": 14,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "W-L-W-D-W"
+    }
+  },
+  "Lille": {
+    "played": 7,
+    "gf": 10,
+    "ga": 5,
+    "pts": 14,
+    "form5": {
+      "gf": 6,
+      "ga": 3,
+      "form": "D-W-L-W-W"
+    }
+  },
+  "Monaco": {
+    "played": 7,
+    "gf": 10,
+    "ga": 6,
+    "pts": 14,
+    "form5": {
+      "gf": 7,
+      "ga": 6,
+      "form": "L-D-W-D-W"
+    }
+  },
+  "Rennes": {
+    "played": 7,
+    "gf": 15,
+    "ga": 14,
+    "pts": 13,
+    "form5": {
+      "gf": 10,
+      "ga": 10,
+      "form": "L-W-L-W-W"
+    }
+  },
+  "Lorient": {
+    "played": 7,
+    "gf": 7,
+    "ga": 6,
+    "pts": 11,
+    "form5": {
+      "gf": 6,
+      "ga": 4,
+      "form": "W-W-L-D-W"
+    }
+  },
+  "Lens": {
+    "played": 7,
+    "gf": 14,
+    "ga": 11,
+    "pts": 10,
+    "form5": {
+      "gf": 8,
+      "ga": 7,
+      "form": "W-W-L-D-L"
+    }
+  },
+  "Marseille": {
+    "played": 7,
+    "gf": 14,
+    "ga": 10,
+    "pts": 9,
+    "form5": {
+      "gf": 10,
+      "ga": 8,
+      "form": "W-W-L-L-L"
+    }
+  },
+  "Stade Brestois 29": {
+    "played": 7,
+    "gf": 13,
+    "ga": 10,
+    "pts": 9,
+    "form5": {
+      "gf": 9,
+      "ga": 6,
+      "form": "D-W-L-L-W"
+    }
+  },
+  "Toulouse": {
+    "played": 7,
+    "gf": 12,
+    "ga": 11,
+    "pts": 9,
+    "form5": {
+      "gf": 10,
+      "ga": 7,
+      "form": "W-D-W-D-L"
+    }
+  },
+  "Auxerre": {
+    "played": 7,
+    "gf": 11,
+    "ga": 17,
+    "pts": 9,
+    "form5": {
+      "gf": 8,
+      "ga": 9,
+      "form": "W-L-W-W-L"
+    }
+  },
+  "Nice": {
+    "played": 7,
+    "gf": 6,
+    "ga": 9,
+    "pts": 8,
+    "form5": {
+      "gf": 6,
+      "ga": 6,
+      "form": "L-W-W-L-D"
+    }
+  },
+  "Strasbourg": {
+    "played": 7,
+    "gf": 12,
+    "ga": 15,
+    "pts": 7,
+    "form5": {
+      "gf": 10,
+      "ga": 10,
+      "form": "L-L-L-D-W"
+    }
+  },
+  "Angers": {
+    "played": 7,
+    "gf": 9,
+    "ga": 15,
+    "pts": 7,
+    "form5": {
+      "gf": 6,
+      "ga": 12,
+      "form": "L-L-W-D-L"
+    }
+  },
+  "Le Mans": {
+    "played": 7,
+    "gf": 10,
+    "ga": 15,
+    "pts": 6,
+    "form5": {
+      "gf": 6,
+      "ga": 10,
+      "form": "L-L-W-D-D"
+    }
+  },
+  "Estac Troyes": {
+    "played": 7,
+    "gf": 5,
+    "ga": 16,
+    "pts": 4,
+    "form5": {
+      "gf": 3,
+      "ga": 15,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Le Havre": {
+    "played": 7,
+    "gf": 5,
+    "ga": 11,
+    "pts": 2,
+    "form5": {
+      "gf": 4,
+      "ga": 9,
+      "form": "L-L-L-D-L"
+    }
+  },
+  "FC Porto": {
+    "played": 8,
+    "gf": 20,
+    "ga": 4,
+    "pts": 24,
+    "form5": {
+      "gf": 14,
+      "ga": 4,
+      "form": "W-W-W-W-W"
+    }
+  },
+  "Benfica": {
+    "played": 8,
+    "gf": 24,
+    "ga": 7,
+    "pts": 19,
+    "form5": {
+      "gf": 13,
+      "ga": 4,
+      "form": "W-L-W-W-W"
+    }
+  },
+  "Sporting CP": {
+    "played": 8,
+    "gf": 20,
+    "ga": 9,
+    "pts": 18,
+    "form5": {
+      "gf": 12,
+      "ga": 4,
+      "form": "W-D-D-W-W"
+    }
+  },
+  "Santa Clara": {
+    "played": 8,
+    "gf": 12,
+    "ga": 4,
+    "pts": 18,
+    "form5": {
+      "gf": 8,
+      "ga": 2,
+      "form": "W-D-W-W-D"
+    }
+  },
+  "Arouca": {
+    "played": 8,
+    "gf": 11,
+    "ga": 7,
+    "pts": 14,
+    "form5": {
+      "gf": 6,
+      "ga": 5,
+      "form": "W-D-L-D-W"
+    }
+  },
+  "GIL Vicente": {
+    "played": 8,
+    "gf": 8,
+    "ga": 6,
+    "pts": 14,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "W-W-D-L-L"
+    }
+  },
+  "Academico Viseu": {
+    "played": 8,
+    "gf": 11,
+    "ga": 10,
+    "pts": 14,
+    "form5": {
+      "gf": 7,
+      "ga": 5,
+      "form": "W-W-W-W-L"
+    }
+  },
+  "Alverca": {
+    "played": 8,
+    "gf": 13,
+    "ga": 12,
+    "pts": 11,
+    "form5": {
+      "gf": 10,
+      "ga": 5,
+      "form": "W-W-W-L-D"
+    }
+  },
+  "SC Braga": {
+    "played": 8,
+    "gf": 9,
+    "ga": 10,
+    "pts": 11,
+    "form5": {
+      "gf": 4,
+      "ga": 7,
+      "form": "L-L-D-W-L"
+    }
+  },
+  "Estrela": {
+    "played": 8,
+    "gf": 14,
+    "ga": 15,
+    "pts": 10,
+    "form5": {
+      "gf": 7,
+      "ga": 9,
+      "form": "L-L-D-W-D"
+    }
+  },
+  "Maritimo": {
+    "played": 8,
+    "gf": 9,
+    "ga": 14,
+    "pts": 8,
+    "form5": {
+      "gf": 4,
+      "ga": 11,
+      "form": "L-D-L-L-L"
+    }
+  },
+  "Moreirense": {
+    "played": 8,
+    "gf": 8,
+    "ga": 15,
+    "pts": 8,
+    "form5": {
+      "gf": 5,
+      "ga": 9,
+      "form": "L-D-W-L-L"
+    }
+  },
+  "Famalicao": {
+    "played": 8,
+    "gf": 10,
+    "ga": 11,
+    "pts": 7,
+    "form5": {
+      "gf": 8,
+      "ga": 7,
+      "form": "L-W-D-D-D"
+    }
+  },
+  "Rio Ave": {
+    "played": 8,
+    "gf": 8,
+    "ga": 17,
+    "pts": 7,
+    "form5": {
+      "gf": 6,
+      "ga": 14,
+      "form": "W-L-D-L-L"
+    }
+  },
+  "Vitória SC": {
+    "played": 8,
+    "gf": 5,
+    "ga": 10,
+    "pts": 5,
+    "form5": {
+      "gf": 2,
+      "ga": 6,
+      "form": "L-D-L-D-L"
+    }
+  },
+  "Nacional": {
+    "played": 8,
+    "gf": 9,
+    "ga": 18,
+    "pts": 4,
+    "form5": {
+      "gf": 5,
+      "ga": 15,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Casa Pia": {
+    "played": 8,
+    "gf": 3,
+    "ga": 17,
+    "pts": 4,
+    "form5": {
+      "gf": 3,
+      "ga": 7,
+      "form": "L-W-L-D-L"
+    }
+  },
+  "Estoril": {
+    "played": 8,
+    "gf": 4,
+    "ga": 12,
+    "pts": 2,
+    "form5": {
+      "gf": 3,
+      "ga": 7,
+      "form": "L-L-L-D-L"
+    }
+  },
+  "Feyenoord": {
+    "played": 9,
+    "gf": 31,
+    "ga": 10,
+    "pts": 23,
+    "form5": {
+      "gf": 21,
+      "ga": 4,
+      "form": "W-W-W-W-W"
+    }
+  },
+  "AZ Alkmaar": {
+    "played": 9,
+    "gf": 20,
+    "ga": 10,
+    "pts": 20,
+    "form5": {
+      "gf": 7,
+      "ga": 7,
+      "form": "D-L-W-D-W"
+    }
+  },
+  "PSV Eindhoven": {
+    "played": 9,
+    "gf": 27,
+    "ga": 12,
+    "pts": 19,
+    "form5": {
+      "gf": 12,
+      "ga": 7,
+      "form": "L-W-L-W-W"
+    }
+  },
+  "Ajax": {
+    "played": 9,
+    "gf": 27,
+    "ga": 12,
+    "pts": 18,
+    "form5": {
+      "gf": 18,
+      "ga": 7,
+      "form": "W-D-D-W-W"
+    }
+  },
+  "Twente": {
+    "played": 9,
+    "gf": 17,
+    "ga": 10,
+    "pts": 17,
+    "form5": {
+      "gf": 8,
+      "ga": 5,
+      "form": "L-D-W-W-W"
+    }
+  },
+  "Fortuna Sittard": {
+    "played": 9,
+    "gf": 16,
+    "ga": 17,
+    "pts": 15,
+    "form5": {
+      "gf": 8,
+      "ga": 10,
+      "form": "D-D-W-L-W"
+    }
+  },
+  "Groningen": {
+    "played": 9,
+    "gf": 22,
+    "ga": 19,
+    "pts": 14,
+    "form5": {
+      "gf": 13,
+      "ga": 9,
+      "form": "L-W-W-D-D"
+    }
+  },
+  "Heerenveen": {
+    "played": 9,
+    "gf": 15,
+    "ga": 11,
+    "pts": 12,
+    "form5": {
+      "gf": 10,
+      "ga": 5,
+      "form": "W-L-W-D-L"
+    }
+  },
+  "GO Ahead Eagles": {
+    "played": 9,
+    "gf": 20,
+    "ga": 21,
+    "pts": 11,
+    "form5": {
+      "gf": 9,
+      "ga": 12,
+      "form": "L-D-D-D-D"
+    }
+  },
+  "Excelsior": {
+    "played": 9,
+    "gf": 16,
+    "ga": 18,
+    "pts": 11,
+    "form5": {
+      "gf": 6,
+      "ga": 15,
+      "form": "L-L-D-L-D"
+    }
+  },
+  "Utrecht": {
+    "played": 9,
+    "gf": 16,
+    "ga": 26,
+    "pts": 11,
+    "form5": {
+      "gf": 10,
+      "ga": 11,
+      "form": "W-W-L-W-D"
+    }
+  },
+  "NEC Nijmegen": {
+    "played": 9,
+    "gf": 15,
+    "ga": 16,
+    "pts": 10,
+    "form5": {
+      "gf": 6,
+      "ga": 9,
+      "form": "D-D-D-L-D"
+    }
+  },
+  "Sparta Rotterdam": {
+    "played": 9,
+    "gf": 16,
+    "ga": 22,
+    "pts": 9,
+    "form5": {
+      "gf": 9,
+      "ga": 15,
+      "form": "W-D-L-L-D"
+    }
+  },
+  "Cambuur": {
+    "played": 9,
+    "gf": 13,
+    "ga": 21,
+    "pts": 9,
+    "form5": {
+      "gf": 9,
+      "ga": 5,
+      "form": "D-W-D-W-D"
+    }
+  },
+  "PEC Zwolle": {
+    "played": 9,
+    "gf": 10,
+    "ga": 22,
+    "pts": 7,
+    "form5": {
+      "gf": 6,
+      "ga": 14,
+      "form": "W-L-L-L-D"
+    }
+  },
+  "Telstar": {
+    "played": 9,
+    "gf": 10,
+    "ga": 18,
+    "pts": 6,
+    "form5": {
+      "gf": 5,
+      "ga": 8,
+      "form": "L-D-L-D-L"
+    }
+  },
+  "ADO Den Haag": {
+    "played": 9,
+    "gf": 11,
+    "ga": 20,
+    "pts": 6,
+    "form5": {
+      "gf": 7,
+      "ga": 9,
+      "form": "W-D-D-L-L"
+    }
+  },
+  "Willem II": {
+    "played": 9,
+    "gf": 9,
+    "ga": 26,
+    "pts": 2,
+    "form5": {
+      "gf": 5,
+      "ga": 13,
+      "form": "L-L-L-L-D"
+    }
+  },
+  "Gent": {
+    "played": 8,
+    "gf": 15,
+    "ga": 4,
+    "pts": 22,
+    "form5": {
+      "gf": 9,
+      "ga": 2,
+      "form": "W-W-D-W-W"
+    }
+  },
+  "Club Brugge KV": {
+    "played": 8,
+    "gf": 19,
+    "ga": 4,
+    "pts": 21,
+    "form5": {
+      "gf": 12,
+      "ga": 4,
+      "form": "W-W-W-W-L"
+    }
+  },
+  "Charleroi": {
+    "played": 8,
+    "gf": 16,
+    "ga": 7,
+    "pts": 21,
+    "form5": {
+      "gf": 10,
+      "ga": 6,
+      "form": "W-W-W-L-W"
+    }
+  },
+  "Union St. Gilloise": {
+    "played": 8,
+    "gf": 22,
+    "ga": 4,
+    "pts": 20,
+    "form5": {
+      "gf": 14,
+      "ga": 3,
+      "form": "D-W-W-W-W"
+    }
+  },
+  "Anderlecht": {
+    "played": 8,
+    "gf": 9,
+    "ga": 6,
+    "pts": 16,
+    "form5": {
+      "gf": 7,
+      "ga": 1,
+      "form": "W-W-W-D-W"
+    }
+  },
+  "KVC Westerlo": {
+    "played": 8,
+    "gf": 20,
+    "ga": 17,
+    "pts": 13,
+    "form5": {
+      "gf": 17,
+      "ga": 5,
+      "form": "W-W-W-W-D"
+    }
+  },
+  "Genk": {
+    "played": 8,
+    "gf": 16,
+    "ga": 12,
+    "pts": 12,
+    "form5": {
+      "gf": 8,
+      "ga": 4,
+      "form": "W-L-D-D-W"
+    }
+  },
+  "Zulte Waregem": {
+    "played": 8,
+    "gf": 10,
+    "ga": 9,
+    "pts": 11,
+    "form5": {
+      "gf": 4,
+      "ga": 8,
+      "form": "L-L-L-W-D"
+    }
+  },
+  "Standard Liege": {
+    "played": 8,
+    "gf": 13,
+    "ga": 13,
+    "pts": 11,
+    "form5": {
+      "gf": 6,
+      "ga": 8,
+      "form": "L-L-L-W-W"
+    }
+  },
+  "Lommel United": {
+    "played": 8,
+    "gf": 9,
+    "ga": 9,
+    "pts": 11,
+    "form5": {
+      "gf": 4,
+      "ga": 7,
+      "form": "W-D-L-L-W"
+    }
+  },
+  "SK Beveren": {
+    "played": 8,
+    "gf": 8,
+    "ga": 14,
+    "pts": 9,
+    "form5": {
+      "gf": 6,
+      "ga": 8,
+      "form": "L-L-W-W-L"
+    }
+  },
+  "St. Truiden": {
+    "played": 8,
+    "gf": 15,
+    "ga": 16,
+    "pts": 8,
+    "form5": {
+      "gf": 7,
+      "ga": 11,
+      "form": "L-L-L-W-L"
+    }
+  },
+  "Antwerp": {
+    "played": 8,
+    "gf": 12,
+    "ga": 20,
+    "pts": 7,
+    "form5": {
+      "gf": 3,
+      "ga": 15,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "KV Mechelen": {
+    "played": 8,
+    "gf": 9,
+    "ga": 17,
+    "pts": 6,
+    "form5": {
+      "gf": 6,
+      "ga": 10,
+      "form": "W-D-L-L-D"
+    }
+  },
+  "OH Leuven": {
+    "played": 8,
+    "gf": 6,
+    "ga": 14,
+    "pts": 5,
+    "form5": {
+      "gf": 4,
+      "ga": 6,
+      "form": "D-W-D-L-L"
+    }
+  },
+  "RAAL La Louvière": {
+    "played": 8,
+    "gf": 8,
+    "ga": 18,
+    "pts": 4,
+    "form5": {
+      "gf": 6,
+      "ga": 12,
+      "form": "L-L-W-L-D"
+    }
+  },
+  "Kortrijk": {
+    "played": 8,
+    "gf": 2,
+    "ga": 18,
+    "pts": 3,
+    "form5": {
+      "gf": 1,
+      "ga": 9,
+      "form": "L-W-L-L-L"
+    }
+  },
+  "Cercle Brugge": {
+    "played": 8,
+    "gf": 9,
+    "ga": 16,
+    "pts": 3,
+    "form5": {
+      "gf": 4,
+      "ga": 10,
+      "form": "L-L-D-L-L"
+    }
+  },
+  "Galatasaray": {
+    "played": 8,
+    "gf": 17,
+    "ga": 11,
+    "pts": 19,
+    "form5": {
+      "gf": 8,
+      "ga": 7,
+      "form": "W-W-L-W-W"
+    }
+  },
+  "Amed": {
+    "played": 8,
+    "gf": 18,
+    "ga": 9,
+    "pts": 17,
+    "form5": {
+      "gf": 13,
+      "ga": 6,
+      "form": "W-D-W-W-D"
+    }
+  },
+  "Fenerbahçe": {
+    "played": 8,
+    "gf": 22,
+    "ga": 6,
+    "pts": 16,
+    "form5": {
+      "gf": 15,
+      "ga": 2,
+      "form": "W-W-W-D-L"
+    }
+  },
+  "Trabzonspor": {
+    "played": 8,
+    "gf": 18,
+    "ga": 5,
+    "pts": 16,
+    "form5": {
+      "gf": 14,
+      "ga": 1,
+      "form": "W-W-W-L-W"
+    }
+  },
+  "Beşiktaş": {
+    "played": 8,
+    "gf": 16,
+    "ga": 10,
+    "pts": 15,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "L-W-L-W-W"
+    }
+  },
+  "Çorum FK": {
+    "played": 8,
+    "gf": 18,
+    "ga": 13,
+    "pts": 13,
+    "form5": {
+      "gf": 14,
+      "ga": 4,
+      "form": "W-W-L-W-W"
+    }
+  },
+  "Kasımpaşa": {
+    "played": 8,
+    "gf": 12,
+    "ga": 9,
+    "pts": 13,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "W-L-D-W-D"
+    }
+  },
+  "Kocaelispor": {
+    "played": 8,
+    "gf": 9,
+    "ga": 8,
+    "pts": 12,
+    "form5": {
+      "gf": 5,
+      "ga": 5,
+      "form": "L-L-W-L-W"
+    }
+  },
+  "Alanyaspor": {
+    "played": 8,
+    "gf": 8,
+    "ga": 9,
+    "pts": 12,
+    "form5": {
+      "gf": 5,
+      "ga": 6,
+      "form": "L-D-W-D-W"
+    }
+  },
+  "Başakşehir": {
+    "played": 8,
+    "gf": 12,
+    "ga": 12,
+    "pts": 11,
+    "form5": {
+      "gf": 8,
+      "ga": 9,
+      "form": "W-D-W-L-L"
+    }
+  },
+  "Erzurumspor FK": {
+    "played": 8,
+    "gf": 5,
+    "ga": 11,
+    "pts": 11,
+    "form5": {
+      "gf": 4,
+      "ga": 3,
+      "form": "W-D-W-L-W"
+    }
+  },
+  "Rizespor": {
+    "played": 8,
+    "gf": 8,
+    "ga": 11,
+    "pts": 10,
+    "form5": {
+      "gf": 5,
+      "ga": 8,
+      "form": "L-L-D-W-L"
+    }
+  },
+  "Göztepe": {
+    "played": 8,
+    "gf": 17,
+    "ga": 16,
+    "pts": 9,
+    "form5": {
+      "gf": 12,
+      "ga": 9,
+      "form": "W-W-D-D-L"
+    }
+  },
+  "Gaziantep FK": {
+    "played": 8,
+    "gf": 8,
+    "ga": 12,
+    "pts": 8,
+    "form5": {
+      "gf": 5,
+      "ga": 9,
+      "form": "L-L-L-D-W"
+    }
+  },
+  "Gençlerbirliği S.K.": {
+    "played": 8,
+    "gf": 7,
+    "ga": 16,
+    "pts": 8,
+    "form5": {
+      "gf": 3,
+      "ga": 14,
+      "form": "L-D-L-L-L"
+    }
+  },
+  "Konyaspor": {
+    "played": 8,
+    "gf": 4,
+    "ga": 9,
+    "pts": 5,
+    "form5": {
+      "gf": 1,
+      "ga": 2,
+      "form": "L-D-D-W-L"
+    }
+  },
+  "Samsunspor": {
+    "played": 8,
+    "gf": 7,
+    "ga": 19,
+    "pts": 4,
+    "form5": {
+      "gf": 2,
+      "ga": 14,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Eyüpspor": {
+    "played": 8,
+    "gf": 2,
+    "ga": 22,
+    "pts": 3,
+    "form5": {
+      "gf": 0,
+      "ga": 19,
+      "form": "L-L-L-L-L"
+    }
+  },
+  "Flamengo": {
+    "played": 31,
+    "gf": 61,
+    "ga": 25,
+    "pts": 67,
+    "form5": {
+      "gf": 10,
+      "ga": 4,
+      "form": "W-W-D-W-W"
+    }
+  },
+  "Palmeiras": {
+    "played": 31,
+    "gf": 54,
+    "ga": 22,
+    "pts": 66,
+    "form5": {
+      "gf": 9,
+      "ga": 1,
+      "form": "W-W-W-D-W"
+    }
+  },
+  "Atletico Paranaense": {
+    "played": 31,
+    "gf": 49,
+    "ga": 37,
+    "pts": 53,
+    "form5": {
+      "gf": 11,
+      "ga": 9,
+      "form": "L-W-D-W-D"
+    }
+  },
+  "Cruzeiro": {
+    "played": 31,
+    "gf": 50,
+    "ga": 46,
+    "pts": 51,
+    "form5": {
+      "gf": 12,
+      "ga": 9,
+      "form": "W-L-W-W-L"
+    }
+  },
+  "Fluminense": {
+    "played": 31,
+    "gf": 49,
+    "ga": 39,
+    "pts": 51,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "L-L-W-W-L"
+    }
+  },
+  "Atletico-MG": {
+    "played": 31,
+    "gf": 42,
+    "ga": 35,
+    "pts": 50,
+    "form5": {
+      "gf": 7,
+      "ga": 4,
+      "form": "W-W-D-W-D"
+    }
+  },
+  "Bahia": {
+    "played": 31,
+    "gf": 44,
+    "ga": 39,
+    "pts": 49,
+    "form5": {
+      "gf": 4,
+      "ga": 7,
+      "form": "L-W-L-L-W"
+    }
+  },
+  "Santos": {
+    "played": 31,
+    "gf": 48,
+    "ga": 46,
+    "pts": 45,
+    "form5": {
+      "gf": 9,
+      "ga": 7,
+      "form": "W-L-D-W-W"
+    }
+  },
+  "Sao Paulo": {
+    "played": 31,
+    "gf": 36,
+    "ga": 35,
+    "pts": 42,
+    "form5": {
+      "gf": 5,
+      "ga": 5,
+      "form": "W-W-L-L-W"
+    }
+  },
+  "RB Bragantino": {
+    "played": 31,
+    "gf": 39,
+    "ga": 36,
+    "pts": 41,
+    "form5": {
+      "gf": 7,
+      "ga": 7,
+      "form": "D-W-D-L-L"
+    }
+  },
+  "Botafogo": {
+    "played": 31,
+    "gf": 44,
+    "ga": 48,
+    "pts": 39,
+    "form5": {
+      "gf": 6,
+      "ga": 7,
+      "form": "W-D-L-L-W"
+    }
+  },
+  "Coritiba": {
+    "played": 31,
+    "gf": 38,
+    "ga": 49,
+    "pts": 39,
+    "form5": {
+      "gf": 4,
+      "ga": 14,
+      "form": "L-D-L-L-D"
+    }
+  },
+  "Vitoria": {
+    "played": 31,
+    "gf": 34,
+    "ga": 45,
+    "pts": 37,
+    "form5": {
+      "gf": 9,
+      "ga": 8,
+      "form": "D-L-W-L-D"
+    }
+  },
+  "Mirassol": {
+    "played": 31,
+    "gf": 36,
+    "ga": 44,
+    "pts": 36,
+    "form5": {
+      "gf": 7,
+      "ga": 4,
+      "form": "W-L-D-W-D"
+    }
+  },
+  "Vasco DA Gama": {
+    "played": 30,
+    "gf": 36,
+    "ga": 43,
+    "pts": 35,
+    "form5": {
+      "gf": 9,
+      "ga": 3,
+      "form": "L-D-W-W-W"
+    }
+  },
+  "Corinthians": {
+    "played": 31,
+    "gf": 32,
+    "ga": 39,
+    "pts": 33,
+    "form5": {
+      "gf": 5,
+      "ga": 12,
+      "form": "D-L-L-L-L"
+    }
+  },
+  "Internacional": {
+    "played": 7,
+    "gf": 21,
+    "ga": 9,
+    "pts": 19,
+    "form5": {
+      "gf": 16,
+      "ga": 8,
+      "form": "W-W-D-W-W"
+    }
+  },
+  "Gremio": {
+    "played": 31,
+    "gf": 34,
+    "ga": 44,
+    "pts": 31,
+    "form5": {
+      "gf": 6,
+      "ga": 9,
+      "form": "L-D-D-D-L"
+    }
+  },
+  "Remo": {
+    "played": 31,
+    "gf": 34,
+    "ga": 49,
+    "pts": 26,
+    "form5": {
+      "gf": 4,
+      "ga": 6,
+      "form": "D-D-D-L-L"
+    }
+  },
+  "Chapecoense-sc": {
+    "played": 30,
+    "gf": 30,
+    "ga": 62,
+    "pts": 18,
+    "form5": {
+      "gf": 3,
+      "ga": 12,
+      "form": "L-L-L-D-L"
+    }
+  }
+};
+
+function getTeamStats(teamName) {
+  if (!teamName) return { played: 8, gf: 10, ga: 12, form5: { gf: 5, ga: 7, form: 'D-W-L-D-W' } };
+  const clean = teamName.trim();
+  if (TEAM_STATS[clean]) return TEAM_STATS[clean];
+  for (const k in TEAM_STATS) {
+    if (k.toLowerCase() === clean.toLowerCase() || clean.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(clean.toLowerCase())) {
+      return TEAM_STATS[k];
+    }
+  }
+  return { played: 8, gf: 10, ga: 12, form5: { gf: 5, ga: 7, form: 'D-W-L-D-W' } };
+}
+
+function calculateEuropeanProb(homeTeam, awayTeam, leagueCode) {
+  const hStat = getTeamStats(homeTeam);
+  const aStat = getTeamStats(awayTeam);
+
+  const leagueAvg = 1.38;
+  const PRIOR = 4.0;
+
+  function shrink(rate, n) {
+    return (n * rate + PRIOR * leagueAvg) / (n + PRIOR);
+  }
+
+  // Pembobotan Inti: Form 5 laga terakhir (55%) + Statistik semusim (45%)
+  const rawHAtk = (0.55 * (hStat.form5.gf / 5.0)) + (0.45 * (hStat.gf / Math.max(1, hStat.played)));
+  const rawHDef = (0.55 * (hStat.form5.ga / 5.0)) + (0.45 * (hStat.ga / Math.max(1, hStat.played)));
+  const rawAAtk = (0.55 * (aStat.form5.gf / 5.0)) + (0.45 * (aStat.gf / Math.max(1, aStat.played)));
+  const rawADef = (0.55 * (aStat.form5.ga / 5.0)) + (0.45 * (aStat.ga / Math.max(1, aStat.played)));
+
+  const hAtk = shrink(rawHAtk, hStat.played);
+  const hDef = shrink(rawHDef, hStat.played);
+  const aAtk = shrink(rawAAtk, aStat.played);
+  const aDef = shrink(rawADef, aStat.played);
+
+  // Home boost di kandang sendiri (+0.28) & away friction (-0.12)
+  const netHomeBoost = 0.28;
+  const netAwayFriction = 0.12;
+
+  const hLambda = Math.max(0.40, hAtk + netHomeBoost + 0.22 * (aDef - leagueAvg));
+  const aLambda = Math.max(0.35, aAtk - netAwayFriction + 0.22 * (hDef - leagueAvg));
+
+  function poisson(k, lam) {
+    let p = Math.exp(-lam);
+    for (let i = 0; i < k; i++) p *= lam / (i + 1);
+    return p;
+  }
+
+  let hw = 0, d = 0, aw = 0;
+  for (let h = 0; h <= 7; h++) {
+    for (let a = 0; a <= 7; a++) {
+      const p = poisson(h, hLambda) * poisson(a, aLambda);
+      if (h > a) hw += p; else if (h === a) d += p; else aw += p;
+    }
+  }
+  const tot = hw + d + aw;
+  return {
+    home: +((hw / tot) * 100).toFixed(1),
+    draw: +((d / tot) * 100).toFixed(1),
+    away: +((aw / tot) * 100).toFixed(1),
+    hLambda: +hLambda.toFixed(2),
+    aLambda: +aLambda.toFixed(2),
+    hForm: hStat.form5.form,
+    aForm: aStat.form5.form
+  };
+}
+
+// ══════════════════════════════════════════════
+// EVALUASI MARKET & EDGE ANALYSIS (MODEL STATISTIK VS 1XBET ODDS)
+// ══════════════════════════════════════════════
+function evaluateTop5Market(f) {
+  if (!f.odds) return null; // Belum buka pasaran di 1xBet
+
+  const oH = Number(f.odds.h);
+  const oD = Number(f.odds.d);
+  const oA = Number(f.odds.a);
+
+  // 1. Probabilitas Tersirat dari Bandar (1xBet Vig-Free Implied)
+  const margin = (1 / oH) + (1 / oD) + (1 / oA);
+  const marketH = +(((1 / oH) / margin) * 100).toFixed(1);
+  const marketD = +(((1 / oD) / margin) * 100).toFixed(1);
+  const marketA = +(((1 / oA) / margin) * 100).toFixed(1);
+
+  // 2. Probabilitas Murni dari Model Statistik Tim (Form 5 Laga 55% + Semusim 45%)
+  const prob = calculateEuropeanProb(f.home, f.away, f.leagueCode);
+
+  // Expected Value (EV / Edge)
+  const evH = +((((prob.home / 100) * oH) - 1) * 100).toFixed(1);
+  const evA = +((((prob.away / 100) * oA) - 1) * 100).toFixed(1);
+
+  // Pasar Double Chance (1X dan X2)
+  const o1X = +((1 / ((1/oH) + (1/oD))) * 0.96).toFixed(2);
+  const oX2 = +((1 / ((1/oA) + (1/oD))) * 0.96).toFixed(2);
+  const prob1X = +(prob.home + prob.draw).toFixed(1);
+  const probX2 = +(prob.away + prob.draw).toFixed(1);
+  const ev1X = +((((prob1X / 100) * o1X) - 1) * 100).toFixed(1);
+  const evX2 = +((((probX2 / 100) * oX2) - 1) * 100).toFixed(1);
+
+  // Pasar Draw No Bet (DNB)
+  const oDnbH = +((oH * (1 - (1 / oD)))).toFixed(2);
+  const oDnbA = +((oA * (1 - (1 / oD)))).toFixed(2);
+  const probDnbH = +((prob.home / Math.max(1, prob.home + prob.away)) * 100).toFixed(1);
+  const probDnbA = +((prob.away / Math.max(1, prob.home + prob.away)) * 100).toFixed(1);
+  const evDnbH = +((((probDnbH / 100) * oDnbH) - 1) * 100).toFixed(1);
+  const evDnbA = +((((probDnbA / 100) * oDnbA) - 1) * 100).toFixed(1);
+
+  // 1. Benteng Kandang (Home Fortress)
+  // Syarat: Model membaca keunggulan kandang kuat (>= 48%), odds ideal @1.30 s/d @2.25, EV layak
+  let homeFortress = null;
+  if (prob.home >= 48.0 && oH >= 1.30 && oH <= 2.25 && evH >= -5.0) {
+    homeFortress = {
+      type: 'home_fortress',
+      team: f.home,
+      odds: oH,
+      winRate: prob.home,
+      ev: evH,
+      side: 'home',
+      label: `${f.home} Win (Kandang)`
+    };
+  }
+
+  // 2. Favorit Emas (Favorite Value)
+  // Syarat: Tim unggulan yang didukung model statistik & memiliki EV positif (Value Bet)
+  let favoriteValue = null;
+  if (prob.home >= 48.0 && evH >= 0.0 && oH >= 1.35) {
+    favoriteValue = {
+      type: 'favorite',
+      team: f.home,
+      odds: oH,
+      winRate: prob.home,
+      ev: evH,
+      side: 'home',
+      label: `${f.home} Win`
+    };
+  } else if (prob.away >= 45.0 && evA >= 0.0 && oA >= 1.35) {
+    favoriteValue = {
+      type: 'favorite',
+      team: f.away,
+      odds: oA,
+      winRate: prob.away,
+      ev: evA,
+      side: 'away',
+      label: `${f.away} Win (Tandang)`
+    };
+  }
+
+  // 3. Double Chance (Pengaman Underdog)
+  // Menang di 2 dari 3 hasil (1X / X2)
+  let safetyNet = null;
+  if (prob1X >= 62.0 && o1X >= 1.30 && ev1X >= -5.0) {
+    safetyNet = {
+      type: 'double_chance',
+      team: f.home,
+      odds: o1X,
+      winRate: prob1X,
+      ev: ev1X,
+      side: '1x',
+      label: `${f.home} Seri/Menang (1X)`
+    };
+  } else if (probX2 >= 62.0 && oX2 >= 1.30 && evX2 >= -5.0) {
+    safetyNet = {
+      type: 'double_chance',
+      team: f.away,
+      odds: oX2,
+      winRate: probX2,
+      ev: evX2,
+      side: 'x2',
+      label: `${f.away} Seri/Menang (X2)`
+    };
+  }
+
+  // 4. Draw No Bet (DNB - Seri Refund)
+  let dnbValue = null;
+  if (prob.home >= 45.0 && oDnbH >= 1.35 && oDnbH <= 2.20 && evDnbH >= -5.0) {
+    dnbValue = {
+      type: 'dnb',
+      team: f.home,
+      odds: oDnbH,
+      winRate: probDnbH,
+      ev: evDnbH,
+      isDnb: true,
+      side: 'home_dnb',
+      label: `${f.home} DNB (Seri Refund)`
+    };
+  } else if (prob.away >= 45.0 && oDnbA >= 1.35 && oDnbA <= 2.20 && evDnbA >= -5.0) {
+    dnbValue = {
+      type: 'dnb',
+      team: f.away,
+      odds: oDnbA,
+      winRate: probDnbA,
+      ev: evDnbA,
+      isDnb: true,
+      side: 'away_dnb',
+      label: `${f.away} DNB (Seri Refund)`
+    };
+  }
+
+  // 5. High Odds Sniper (Independen)
+  let highOddsSniper = null;
+  if (oH >= 1.85 && oH <= 3.60 && prob.home >= 35.0 && evH >= 3.0) {
+    highOddsSniper = {
+      type: 'high_odds',
+      team: f.home,
+      odds: oH,
+      winRate: prob.home,
+      ev: evH,
+      side: 'home',
+      label: `${f.home} Win (Sniper)`
+    };
+  } else if (oA >= 1.85 && oA <= 3.60 && prob.away >= 35.0 && evA >= 3.0) {
+    highOddsSniper = {
+      type: 'high_odds',
+      team: f.away,
+      odds: oA,
+      winRate: prob.away,
+      ev: evA,
+      side: 'away',
+      label: `${f.away} Win (Sniper)`
+    };
+  }
+
+  // 6. Trap alert (Radar Jebakan Bandar)
+  // Terdeteksi jika harga bandar terlalu murah padahal model membaca peluang riil tim jauh lebih rendah
+  let trap = null;
+  if (marketH - prob.home >= 9.0 && oH <= 1.70) {
+    trap = {
+      team: f.home,
+      odds: oH,
+      gap: +((marketH - prob.home).toFixed(1)),
+      marketProb: marketH,
+      modelProb: prob.home,
+      counterOdds: oX2
+    };
+  } else if (marketA - prob.away >= 9.0 && oA <= 1.70) {
+    trap = {
+      team: f.away,
+      odds: oA,
+      gap: +((marketA - prob.away).toFixed(1)),
+      marketProb: marketA,
+      modelProb: prob.away,
+      counterOdds: o1X
+    };
+  }
+
+  return { prob, homeFortress, favoriteValue, safetyNet, dnbValue, highOddsSniper, trap };
+}
+
+// ══════════════════════════════════════════════
+// ATURAN ARBITRASE "WORTH IT" 4 KATEGORI INTI
+// ══════════════════════════════════════════════
+function resolveTop5WorthItPick(opp, f) {
+  if (!opp) return null;
+  const c = [];
+  if (opp.homeFortress) c.push({ ...opp.homeFortress, strategyKey: 'home_fortress', icon: '🏰', badge: 'BENTENG KANDANG', badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' });
+  if (opp.favoriteValue) c.push({ ...opp.favoriteValue, strategyKey: 'favorit_emas', icon: '🌟', badge: 'FAVORIT EMAS', badgeColor: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' });
+  if (opp.safetyNet) c.push({ ...opp.safetyNet, strategyKey: 'double_chance', icon: '🛡️', badge: 'PENGAMAN DC', badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' });
+  if (opp.dnbValue) c.push({ ...opp.dnbValue, strategyKey: 'dnb', icon: '🔄', badge: 'DNB REFUND', badgeColor: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' });
+
+  if (!c.length) return null;
+  if (c.length === 1) return { ...c[0], isWorthItPrimary: true, totalOptions: 1 };
+
+  const fav = c.find(x => x.strategyKey === 'favorit_emas');
+  const dc = c.find(x => x.strategyKey === 'double_chance');
+
+  // ════════════════════════════════════════════════════════════
+  // ARBITRASE EKSKLUSIF: FAVORIT EMAS VS DOUBLE CHANCE
+  // Aturan: 1 Tim/Laga hanya boleh ada di salah satu tab inti!
+  // Langkah 1: Bandingkan odds mana yang lebih besar (Single Win selalu lebih besar dari Double Chance).
+  // Langkah 2: Tentukan mana yang lebih worth it untuk mendapatkan kemenangan:
+  // - Jika peluang menang single dominan (>= 55.0%) & EV tinggi (>= 15%), ambil Favorit Emas (Odds Besar & Worth It).
+  // - Jika peluang single rapuh (< 55.0%) / rawan seri, ambil Double Chance (Peluang Menang 70-85% Jauh Lebih Pasti).
+  // ════════════════════════════════════════════════════════════
+  if (fav && dc) {
+    if (fav.winRate >= 55.0 && fav.ev >= 15.0) {
+      return { ...fav, isWorthItPrimary: true, totalOptions: c.length };
+    }
+    if (dc.winRate >= 68.0) {
+      return { ...dc, isWorthItPrimary: true, totalOptions: c.length };
+    }
+  }
+
+  // Jika ada Benteng Kandang dominan (winRate >= 52%)
+  const hf = c.find(x => x.strategyKey === 'home_fortress');
+  if (hf && hf.winRate >= 52.0) {
+    return { ...hf, isWorthItPrimary: true, totalOptions: c.length };
+  }
+
+  // Urutkan berdasarkan efisiensi kemenangan tertinggi
+  c.sort((a, b) => (b.winRate * (b.ev + 100)) - (a.winRate * (a.ev + 100)));
+  return { ...c[0], isWorthItPrimary: true, totalOptions: c.length };
+}
+
+function setMainTab(tab) {
+  ['bet', 'history', 'compound', 'parlay'].forEach(t => {
+    document.getElementById(`view-${t}`)?.classList.toggle('hidden', t !== tab);
+    document.getElementById(`main-tab-${t}`)?.classList.toggle('active', t === tab);
+  });
+  if (tab === 'history') renderSignalHistoryView();
+  if (tab === 'compound') renderCompoundView();
+  if (tab === 'parlay') renderSmartParlay();
+}
+
+function filterLeague(leagueId) {
+  activeLeagueFilter = leagueId;
+  ['all', '39', '140', '135', '78', '61', '94', '88', '144', '203', '71'].forEach(id => {
+    document.getElementById(`chip-league-${id}`)?.classList.toggle('active', id === leagueId);
+  });
+  renderAllViews();
+  initBankrollCloudSync();
+}
+
+function setStrategyPreset(presetKey) {
+  currentStrategyPreset = presetKey;
+  renderStrategyPresetsGrid();
+  renderValuePicks();
+}
+
+function renderStrategyPresetsGrid() {
+  const g = document.getElementById('strategy-presets-grid');
+  if (!g) return;
+  g.innerHTML = Object.values(STRATEGY_PRESETS).map(p => {
+    const isActive = p.id === currentStrategyPreset;
+    return `
+      <div onclick="setStrategyPreset('${p.id}')" class="p-2 rounded-lg border ${isActive ? 'border-primary bg-primary/10 shadow-2xs' : 'border-[var(--border)] bg-[var(--background)]'} cursor-pointer hover:border-primary/50 transition-all text-xs">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm">${p.icon}</span>
+          ${isActive ? '<span class="text-[9px] bg-primary text-white px-1.5 py-0.2 rounded font-bold">Aktif</span>' : ''}
+        </div>
+        <div class="font-bold truncate text-[11px] mb-0.5">${p.shortName}</div>
+      </div>`;
+  }).join('');
+}
+
+function getActiveBankrollBet(home, away) {
+  if (!home || !away || typeof userBets === 'undefined' || !userBets) return null;
+  const hLower = home.toLowerCase();
+  const aLower = away.toLowerCase();
+  return userBets.find(b => {
+    if (b.status !== 'pending') return false;
+    const bMatch = (b.match || '').toLowerCase();
+    const bHome = (b.home || '').toLowerCase();
+    const bAway = (b.away || '').toLowerCase();
+    return (bHome.includes(hLower) || hLower.includes(bHome) || bMatch.includes(hLower)) &&
+           (bAway.includes(aLower) || aLower.includes(bAway) || bMatch.includes(aLower));
+  }) || null;
+}
+
+function getMatchLiveStatus(f) {
+  if (f.isFinished || f.status === 'FT') return { isLive: false, isFinished: true, label: 'FT' };
+  
+  const apiStatus = (f.status || '').toUpperCase();
+  if (['1H', 'HT', '2H', 'ET', 'P', 'LIVE', 'IN_PLAY'].includes(apiStatus)) {
+    return { isLive: true, isFinished: false, label: '🔴 SEDANG TANDING (LIVE)' };
+  }
+
+  const now = Date.now();
+  const matchTime = new Date(f.date).getTime();
+  if (!isNaN(matchTime)) {
+    const diffMin = (now - matchTime) / (1000 * 60);
+    // Jika antara 0 s/d 130 menit setelah kickoff -> sedang bertanding (Live)
+    if (diffMin >= 0 && diffMin <= 130) {
+      return { isLive: true, isFinished: false, label: '🔴 SEDANG TANDING (LIVE)' };
+    }
+    // Jika lebih dari 130 menit sejak kickoff -> selesai dimainkan
+    if (diffMin > 130) {
+      return { isLive: false, isFinished: true, label: 'FT' };
+    }
+  }
+
+  return { isLive: false, isFinished: false, label: 'NS' };
+}
+
+function renderValuePicks() {
+  const c = document.getElementById('value-picks-container');
+  const t = document.getElementById('trap-alerts-container');
+  if (!c) return;
+
+  // Saring hanya laga yang belum selesai (FT)
+  let fixtures = (activeLeagueFilter === 'all'
+    ? allFixtures
+    : allFixtures.filter(f => String(f.leagueId) === String(activeLeagueFilter)))
+    .filter(f => !f.isFinished && f.status !== 'FT');
+
+  const picks = [];
+  const traps = [];
+
+  fixtures.forEach(f => {
+    const liveStatus = getMatchLiveStatus(f);
+    if (liveStatus.isFinished) return; // Abaikan laga yang sudah lewat durasi main
+
+    const opp = evaluateTop5Market(f);
+    const bankrollBet = getActiveBankrollBet(f.home, f.away);
+
+    if (bankrollBet) {
+      let pickData = null;
+      if (opp) {
+        pickData = resolveTop5WorthItPick(opp, f);
+      }
+      if (!pickData) {
+        pickData = {
+          type: bankrollBet.type,
+          odds: bankrollBet.odds,
+          winRate: 65,
+          ev: 10,
+          label: bankrollBet.typeLabel || `${f.home} Win`,
+          strategyKey: currentStrategyPreset || 'home_fortress',
+          icon: '💼',
+          badge: 'DI BANKROLL',
+          badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
+        };
+      }
+
+      picks.push({
+        f,
+        ...pickData,
+        isWorthIt: true,
+        isLockedInBankroll: true,
+        isLive: liveStatus.isLive,
+        bankrollBet: bankrollBet,
+        trapInfo: opp?.trap
+      });
+      return;
+    }
+
+    if (!opp) return;
+    if (opp.trap) traps.push({ f, trap: opp.trap });
+
+    const bestCore = resolveTop5WorthItPick(opp, f);
+
+    if (currentStrategyPreset === 'high_odds_sniper') {
+      if (opp.highOddsSniper) {
+        picks.push({ f, ...opp.highOddsSniper, strategyKey: 'high_odds_sniper', icon: '🎯', badge: 'HIGH ODDS SNIPER', badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300', isWorthIt: true, isLive: liveStatus.isLive, trapInfo: opp.trap });
+      }
+    } else {
+      if (bestCore && bestCore.strategyKey === currentStrategyPreset) {
+        picks.push({ f, ...bestCore, isWorthIt: true, isLive: liveStatus.isLive, trapInfo: opp.trap });
+      }
+    }
+  });
+
+  // Urutkan rekomendasi dari tanggal & jam terdekat
+  picks.sort((a, b) => new Date(a.f.date).getTime() - new Date(b.f.date).getTime());
+
+  if (!picks.length) {
+    c.innerHTML = `<div class="col-span-2 p-5 text-center text-xs text-[var(--muted-foreground)] border border-dashed border-[var(--border)] rounded-xl">
+      ⏳ Belum ada laga di ${activeLeagueFilter === 'all' ? 'Top 10 Liga Dunia' : 'liga ini'} yang pasarannya dibuka oleh 1xBet untuk kriteria strategi ini. Pasaran belum dibuka tidak dihitung fiktif.
+    </div>`;
+  } else {
+    c.innerHTML = picks.map(p => `
+      <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] hover:border-emerald-500 transition-all space-y-2 text-xs shadow-xs">
+        <!-- Baris 1: Informasi Liga, Waktu & Badge Status -->
+        <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] border-b border-[var(--border)]/50 pb-1.5 flex-wrap gap-1">
+          <span class="font-medium">${p.f.leagueFlag} ${p.f.leagueCode} · 🕒 ${new Date(p.f.date).toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' })}, ${new Date(p.f.date).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' })} WIB</span>
+          <div class="flex items-center gap-1">
+            ${p.trapInfo ? `
+              <span class="bg-red-600 text-white text-[8.5px] font-black px-1.5 py-0.5 rounded flex items-center gap-1 shadow-2xs animate-pulse" title="Pertandingan ini ada di Radar Jebakan Bandar! Bandar overhype ${p.trapInfo.team} (+${p.trapInfo.gap}%).">
+                <span>🚨</span>
+                <span>ADA DI RADAR TRAP</span>
+              </span>` : ''}
+            ${p.isLive ? `
+              <span class="bg-red-600 text-white text-[8.5px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-2xs animate-pulse">
+                <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                <span>🔴 SEDANG TANDING (LIVE)</span>
+              </span>` : ''}
+            ${p.isLockedInBankroll ? '<span class="bg-blue-600 text-white text-[8.5px] font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-2xs">💼 SUDAH DI BANKROLL</span>' : (p.isWorthIt ? '<span class="bg-amber-500 text-white text-[8.5px] px-1.5 py-0.5 rounded font-black shadow-2xs">⭐ Paling Worth It</span>' : '')}
+          </div>
+        </div>
+
+        <!-- Baris 2: Judul Pertandingan & Live Score Real-Time -->
+        <div class="font-black text-xs sm:text-[13px] text-[var(--foreground)] truncate pt-0.5">
+          ${formatMatchTitle(p.f)}
+        </div>
+
+        ${p.isLive ? `
+          <!-- KOTAK SKOR LIVE & MENIT BERJALAN -->
+          <div class="p-2.5 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-between text-xs my-1 shadow-2xs">
+            <span class="font-black text-xs truncate flex-1 text-right text-[var(--foreground)]">${p.f.home}</span>
+            <div class="px-3 shrink-0 flex flex-col items-center">
+              <span class="font-mono font-black text-sm sm:text-base text-red-600 dark:text-red-400 tracking-wider">
+                ${p.f.liveHomeScore !== undefined ? p.f.liveHomeScore : 0} - ${p.f.liveAwayScore !== undefined ? p.f.liveAwayScore : 0}
+              </span>
+              <span class="text-[9px] font-black text-red-600 dark:text-red-400 flex items-center gap-1 uppercase tracking-tight">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                ${p.f.liveElapsed ? p.f.liveElapsed + '\'' : (p.f.status || 'LIVE')}
+              </span>
+            </div>
+            <span class="font-black text-xs truncate flex-1 text-left text-[var(--foreground)]">${p.f.away}</span>
+          </div>
+        ` : ''}
+
+        <!-- Baris 3: Kotak Rapi Strategi, Peluang Win & Nilai EV (Rapi, Lapang, Tidak Tumpuk) -->
+        <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between flex-wrap gap-1.5">
+          <span class="font-bold text-[10px] ${p.badgeColor} px-2 py-0.5 rounded inline-flex items-center gap-1 shadow-2xs">
+            <span>${p.icon} ${p.badge}</span>
+          </span>
+          <div class="flex items-center gap-1.5 font-mono text-[10px]">
+            <span class="text-emerald-700 dark:text-emerald-400 font-extrabold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+              Peluang: ${p.winRate}%
+            </span>
+            ${p.ev !== undefined ? `
+              <span class="font-bold ${p.ev >= 0 ? 'text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20' : 'text-amber-700 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'} px-1.5 py-0.5 rounded border">
+                ${p.ev >= 0 ? '+' : ''}${p.ev}% EV
+              </span>` : ''}
+          </div>
+        </div>
+
+        <!-- Baris 4: Target Rekomendasi Taruhan & Odds Bandar -->
+        <div class="flex items-center justify-between pt-1 text-[11px]">
+          <span class="font-bold text-emerald-600 dark:text-emerald-400 truncate mr-2">${p.label || (p.team + ' Win')}</span>
+          <strong class="text-primary font-mono text-sm shrink-0">@ ${p.odds}</strong>
+        </div>
+
+        <!-- Tombol Eksekusi Taruhan -->
+        ${p.isLive ? `
+          ${p.isLockedInBankroll ? `
+            <div class="w-full py-2 px-3 rounded-lg bg-blue-600/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-center text-xs flex items-center justify-center gap-1.5 shadow-2xs">
+              <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+              <span>Sedang Tanding (Terkunci di Bankroll Rp ${Number(p.bankrollBet.stake || 100000).toLocaleString('id-ID')} @${p.bankrollBet.odds})</span>
+            </div>
+          ` : `
+            <div class="w-full py-2 px-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 font-bold text-center text-xs flex items-center justify-center gap-1.5 shadow-2xs">
+              <span>⛔</span>
+              <span>Taruhan Pra-Laga Ditutup (Laga Sedang Berlangsung)</span>
+            </div>
+          `}
+        ` : (p.isLockedInBankroll ? `
+          <div class="w-full py-2 px-3 rounded-lg bg-blue-600/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 font-bold text-center text-xs flex items-center justify-center gap-1.5 shadow-2xs">
+            <span>🔒</span>
+            <span>Terkunci di Bankroll (Rp ${Number(p.bankrollBet.stake || 100000).toLocaleString('id-ID')} @${p.bankrollBet.odds})</span>
+          </div>
+        ` : `
+          <button type="button" onclick="quickBet('${p.f.home}', '${p.f.away}', '${p.side}', ${p.odds})" class="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold shadow-xs">
+            <span>⚡ Pasang @ ${p.odds}</span>
+          </button>
+        `)}
+      </div>`
+    ).join('');
+  }
+
+  if (t) {
+    if (!traps.length) {
+      t.innerHTML = `<div class="p-3 text-center text-[11px] text-[var(--muted-foreground)]">✅ Tidak ada tim overhype yang terdeteksi jebakan di pekan terdekat.</div>`;
+    } else {
+      t.innerHTML = traps.map(tr => `
+        <div class="p-2.5 rounded-lg border border-red-200 dark:border-red-950 bg-red-50/40 dark:bg-red-950/20 text-xs space-y-1">
+          <div class="flex items-center justify-between font-bold text-red-700 dark:text-red-300 text-[11px]">
+            <span>${formatMatchTitle(tr.f)}</span>
+            <span class="text-[9px] bg-red-600 text-white px-1.5 py-0.2 rounded font-black">Overhype +${tr.trap.gap}%</span>
+          </div>
+          <div class="flex items-center justify-between text-[10.5px]">
+            <span>Odds @${tr.trap.odds} (Pasar: ${tr.trap.marketProb}%)</span>
+            <span class="font-bold text-red-600">Model Riil: ${tr.trap.modelProb}%</span>
+          </div>
+          <div class="text-[10px] text-[var(--muted-foreground)] pt-0.5 border-t border-red-200/50 dark:border-red-900/50">Disarankan: Kontra Lawan (@${tr.trap.counterOdds}) atau Skip.</div>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function quickBet(home, away, side, odds) {
+  const sel = document.getElementById('bet-match-select');
+  if (sel) {
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].text.includes(home.split(' ')[0])) {
+        sel.selectedIndex = i;
+        break;
+      }
+    }
+  }
+  const typeSel = document.getElementById('bet-selection-type');
+  if (typeSel) typeSel.value = side.includes('x2') ? 'x2' : side.includes('1x') ? '1x' : side.includes('dnb') ? 'home_dnb' : 'home';
+  const oInp = document.getElementById('bet-odds-input');
+  if (oInp) oInp.value = odds;
+  updateBetCalculator();
+  document.getElementById('bet-form-card')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+function populateMatchSelect() {
+  const sel = document.getElementById('bet-match-select');
+  if (!sel) return;
+  const sorted = [...allFixtures].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  sel.innerHTML = sorted.map(f => {
+    const liveStatus = getMatchLiveStatus(f);
+    const dObj = new Date(f.date);
+    const day = dObj.getDate();
+    const month = dObj.toLocaleDateString('id-ID', { month: 'short' });
+    const dStr = `${day} ${month}`;
+    const tStr = dObj.toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' }).replace(':', '.');
+    const liveText = liveStatus.isLive ? ' [🔴 SEDANG TANDING - DITUTUP]' : '';
+    const disabledAttr = liveStatus.isLive ? 'disabled style="color: #ef4444;"' : '';
+    return `
+    <option value="${f.id}" ${disabledAttr} data-islive="${liveStatus.isLive}" data-league="${f.leagueCode}" data-home="${f.home}" data-away="${f.away}" data-date="${dStr}, ${tStr}" data-odds-h="${f.odds?.h || ''}" data-odds-d="${f.odds?.d || ''}" data-odds-a="${f.odds?.a || ''}">
+      ${f.home} vs ${f.away} ( ${dStr}, ${tStr} )${liveText}
+    </option>`;
+  }).join('');
+}
+
+function updateBetCalculator() {
+  const o = parseFloat(document.getElementById('bet-odds-input')?.value || 0);
+  const s = parseFloat(document.getElementById('bet-stake-input')?.value || 0);
+  const pEl = document.getElementById('calc-potential-payout');
+  if (pEl) {
+    pEl.textContent = 'Rp ' + Math.round(o * s).toLocaleString('id-ID');
+  }
+}
+
+function saveBetRecord() {
+  const sel = document.getElementById('bet-match-select');
+  const opt = sel?.selectedOptions?.[0];
+  const home = opt?.dataset?.home || '';
+  const away = opt?.dataset?.away || '';
+  const dateStr = opt?.dataset?.date || '';
+  const leagueCode = opt?.dataset?.league || '';
+  const matchText = home && away ? `${home} vs ${away}` : (opt?.text || 'Top 5 Match');
+  const isLive = opt?.dataset?.islive === 'true';
+  if (isLive) {
+    showAppDialog({
+      icon: '⛔',
+      title: 'Taruhan Pra-Laga Ditutup',
+      message: 'Pertandingan <strong>' + matchText + '</strong> sedang berlangsung (LIVE). Taruhan pra-laga sudah ditutup.',
+      type: 'alert',
+      confirmText: 'Mengerti'
+    });
+    return;
+  }
+
+
+  const type = document.getElementById('bet-selection-type')?.value || 'home';
+  const odds = parseFloat(document.getElementById('bet-odds-input')?.value || 1.60);
+  const stake = parseFloat(document.getElementById('bet-stake-input')?.value || 100000);
+
+  let typeLabel = 'Home Win';
+  if (type === 'draw') typeLabel = 'Seri (Draw)';
+  else if (type === 'away') typeLabel = away ? `${away} Win` : 'Away Win';
+  else if (type === '1x') typeLabel = home ? `${home} Seri/Menang (1X)` : '1X';
+  else if (type === 'x2') typeLabel = away ? `${away} Seri/Menang (X2)` : 'X2';
+  else if (type === 'home_dnb') typeLabel = home ? `${home} DNB (Draw Refund)` : 'Home DNB';
+  else if (type === 'away_dnb') typeLabel = away ? `${away} DNB (Draw Refund)` : 'Away DNB';
+  else if (type === 'home') typeLabel = home ? `${home} Win` : 'Home Win';
+
+  const bet = {
+    id: 'bet_' + Date.now(),
+    match: matchText,
+    home,
+    away,
+    dateStr,
+    leagueCode,
+    type,
+    typeLabel,
+    odds,
+    stake,
+    status: 'pending',
+    date: new Date().toISOString()
+  };
+
+  userBets.unshift(bet);
+  localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+  syncBetToCloud(bet);
+  renderBetKPIs();
+  renderBetHistory();
+  renderValuePicks();
+  showAppDialog({
+    icon: '🎉',
+    title: 'Tiket Berhasil Dicatat!',
+    message: 'Tiket taruhan <strong>' + matchText + '</strong> (@' + odds + ') berhasil dicatat ke Bankroll.',
+    type: 'alert',
+    confirmText: 'Mengerti'
+  });
+}
+
+function renderBetKPIs() {
+  const total = userBets.length;
+  const stake = userBets.reduce((a,b) => a + (b.stake||0), 0);
+  let profit = 0;
+  let won = 0;
+  userBets.forEach(b => {
+    if (b.status === 'won') { profit += Math.round(b.stake * b.odds) - b.stake; won++; }
+    else if (b.status === 'lost') { profit -= b.stake; }
+  });
+  const decided = userBets.filter(b => b.status === 'won' || b.status === 'lost').length;
+  const wr = decided > 0 ? ((won / decided) * 100).toFixed(1) : '0.0';
+  const roi = stake > 0 ? ((profit / stake) * 100).toFixed(1) : '0.0';
+
+  document.getElementById('kpi-total-bets').textContent = total + ' Tiket';
+  document.getElementById('kpi-total-staked').textContent = 'Rp ' + stake.toLocaleString('id-ID');
+  const pEl = document.getElementById('kpi-net-profit');
+  pEl.textContent = (profit >= 0 ? '+Rp ' : '-Rp ') + Math.abs(profit).toLocaleString('id-ID');
+  pEl.className = 'text-base sm:text-lg font-black mt-0.5 ' + (profit >= 0 ? 'text-emerald-600' : 'text-red-500');
+  document.getElementById('kpi-win-rate').textContent = wr + '%';
+  document.getElementById('kpi-roi').textContent = (profit >= 0 ? '+' : '') + roi + '%';
+}
+
+let activeBetHistoryFilter = 'all';
+
+function filterBetStatus(status) {
+  activeBetHistoryFilter = status;
+  renderBetHistory();
+}
+
+function renderBetHistory() {
+  const c = document.getElementById('bet-history-list');
+  if (!c) return;
+  document.getElementById('bet-history-count').textContent = `(${userBets.length} tiket)`;
+
+  const filtered = activeBetHistoryFilter === 'all'
+    ? userBets
+    : userBets.filter(b => b.status === activeBetHistoryFilter);
+
+  if (!filtered.length) {
+    c.innerHTML = `<div class="text-center py-5 text-xs text-[var(--muted-foreground)]">Tidak ada tiket dengan status ${activeBetHistoryFilter.toUpperCase()}.</div>`;
+    return;
+  }
+  c.innerHTML = filtered.map(b => {
+    const payout = Math.round((b.stake || 0) * (b.odds || 1));
+    const profit = payout - (b.stake || 0);
+
+    // Bersihkan match title jika masih berisi format lama yang berantakan
+    let cleanMatch = b.match;
+    if (cleanMatch.includes(']')) {
+      const parts = cleanMatch.split(']');
+      cleanMatch = parts[parts.length - 1].replace(/\(@.*?\)/, '').trim();
+    }
+
+    return `
+    <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-2 text-xs shadow-xs">
+      <div class="flex items-center justify-between text-[10.5px] text-[var(--muted-foreground)] border-b border-[var(--border)]/50 pb-1.5 flex-wrap gap-1">
+        <span class="font-medium">${b.leagueCode ? b.leagueCode + ' · ' : ''}${b.dateStr ? b.dateStr : new Date(b.date).toLocaleDateString('id-ID', { day:'numeric', month:'short' })}</span>
+        <div class="flex items-center gap-1.5">
+          ${(b.isLive && b.status === 'pending') ? `
+            <span class="text-[9px] px-2 py-0.5 rounded font-black bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300 border border-red-500/30 flex items-center gap-1 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+              SKOR LIVE: ${b.liveHomeScore !== undefined ? b.liveHomeScore : 0} - ${b.liveAwayScore !== undefined ? b.liveAwayScore : 0} (${b.liveElapsed ? b.liveElapsed + '\'' : (b.liveStatus || 'LIVE')})
+            </span>
+          ` : ''}
+          <span class="text-[9px] px-2 py-0.5 rounded font-black ${
+            b.status === 'won' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
+            b.status === 'lost' ? 'bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300' :
+            'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+          }">${b.status.toUpperCase()}</span>
+          <button onclick="toggleBetStatus('${b.id}', 'won')" class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500 text-white font-bold hover:bg-emerald-600" title="Tandai Menang">W</button>
+          <button onclick="toggleBetStatus('${b.id}', 'lost')" class="text-[9px] px-1.5 py-0.5 rounded bg-rose-500 text-white font-bold hover:bg-rose-600" title="Tandai Kalah">L</button>
+          <button onclick="deleteBet('${b.id}')" class="text-[9px] px-1.5 py-0.5 rounded bg-gray-500 text-white font-bold hover:bg-gray-600" title="Hapus Tiket">✕</button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between flex-wrap gap-1">
+        <div>
+          <div class="font-bold text-[12.5px] text-[var(--foreground)]">${cleanMatch}</div>
+          <div class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">Pilihan: ${b.typeLabel || b.type.toUpperCase()}</div>
+        </div>
+        <div class="text-right">
+          <span class="font-mono font-black text-primary text-sm">@${b.odds}</span>
+        </div>
+      </div>
+
+      <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between text-[10.5px]">
+        <span class="text-[var(--muted-foreground)]">Modal: <strong>Rp ${(b.stake||0).toLocaleString('id-ID')}</strong></span>
+        <span class="text-emerald-600 font-bold">Payout: Rp ${payout.toLocaleString('id-ID')} (+Rp ${profit.toLocaleString('id-ID')})</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBetStatus(betId, newStatus) {
+  const bet = userBets.find(b => b.id === betId);
+  if (bet) {
+    bet.status = bet.status === newStatus ? 'pending' : newStatus;
+    localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+    syncBetToCloud(bet);
+    renderBetKPIs();
+    renderBetHistory();
+  }
+}
+
+function deleteBet(betId) {
+  showAppDialog({
+    icon: '🗑️',
+    title: 'Hapus Tiket Taruhan',
+    message: 'Apakah Anda yakin ingin menghapus tiket ini dari riwayat?',
+    type: 'confirm',
+    confirmText: 'Ya, Hapus',
+    cancelText: 'Batal',
+    onConfirm: () => {
+      userBets = userBets.filter(b => b.id !== betId);
+      localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+      deleteBetFromCloud(betId);
+      renderBetKPIs();
+      renderBetHistory();
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+// ROLLING COMPOUND CONTROLLER
+// ══════════════════════════════════════════════
+function setCompoundSolution(solNum) {
+  currentCompoundSolution = solNum;
+  [1, 2, 3].forEach(n => {
+    document.getElementById(`comp-btn-sol${n}`)?.classList.toggle('border-primary', n === solNum);
+    document.getElementById(`comp-btn-sol${n}`)?.classList.toggle('bg-primary/5', n === solNum);
+  });
+  renderCompoundView();
+}
+
+function renderCompoundView() {
+  const c = document.getElementById('compound-cycle-card');
+  if (!c) return;
+  const targetCair = Math.round(currentCompoundBankroll * 1.60 * 1.60);
+  c.innerHTML = `
+    <div class="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-[var(--border)]">
+      <div>
+        <span class="text-[10px] font-bold text-primary uppercase">Siklus Aktif Saat Ini</span>
+        <h3 class="text-sm font-black">Solusi ${currentCompoundSolution}: DNB Rolling Compound (@1.60)</h3>
+      </div>
+      <div class="text-right">
+        <span class="text-[10.5px] text-[var(--muted-foreground)]">Target Pencairan (2 Langkah):</span>
+        <div class="text-emerald-600 font-black text-sm font-mono">Rp ${targetCair.toLocaleString('id-ID')}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 text-xs">
+      <div class="p-3 rounded-xl border ${currentCompoundStep === 1 ? 'border-primary bg-primary/10 font-bold' : 'border-[var(--border)] opacity-60'}">
+        <div class="text-[10px] text-primary">Langkah 1</div>
+        <div>Tiket Pembuka: Rp ${currentCompoundBankroll.toLocaleString('id-ID')}</div>
+        <div class="text-[10.5px] text-emerald-600 font-bold mt-1">Target: Rp ${Math.round(currentCompoundBankroll * 1.60).toLocaleString('id-ID')}</div>
+      </div>
+      <div class="p-3 rounded-xl border ${currentCompoundStep === 2 ? 'border-primary bg-primary/10 font-bold' : 'border-[var(--border)] opacity-60'}">
+        <div class="text-[10px] text-primary">Langkah 2</div>
+        <div>Gulung Saldo: Rp ${Math.round(currentCompoundBankroll * 1.60).toLocaleString('id-ID')}</div>
+        <div class="text-[10.5px] text-emerald-600 font-bold mt-1">Cairkan: Rp ${targetCair.toLocaleString('id-ID')}</div>
+      </div>
+    </div>
+
+    <div class="p-3 rounded-lg border border-emerald-300 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950/20 text-xs flex items-center justify-between flex-wrap gap-2">
+      <span>🎯 <strong>Sinyal Eksekusi Terpilih:</strong> Pilih sinyal DNB (@1.55 - @1.75) di tab Tracker Bet untuk menjalankan siklus ini.</span>
+      <button class="btn-primary py-1 px-3 text-[11px]" onclick="showAppDialog({ icon: '🎉', title: 'Siklus Selesai!', message: 'Siklus Rolling Compound berhasil diselesaikan dan dicatat ke Bankroll.', type: 'alert', confirmText: 'Selesai' })">Selesaikan Langkah</button>
+    </div>
+  `;
+}
+
+// ══════════════════════════════════════════════
+// SMART PARLAY CONTROLLER (SINKRON 100% DENGAN TRACKER BET & SINYAL)
+// ══════════════════════════════════════════════
+window._lastParlayPackages = {};
+
+function renderSmartParlay() {
+  const c = document.getElementById('smart-parlay-packages');
+  if (!c) return;
+
+  const fixtures = activeLeagueFilter === 'all'
+    ? allFixtures
+    : allFixtures.filter(f => String(f.leagueId) === String(activeLeagueFilter));
+
+  const verifiedPicks = [];
+  fixtures.forEach(f => {
+    const opp = evaluateTop5Market(f);
+    if (!opp) return;
+    const primary = resolveTop5WorthItPick(opp, f);
+    if (!primary) return;
+    verifiedPicks.push(Object.assign({}, primary, { f: f }));
+  });
+
+  if (verifiedPicks.length < 2) {
+    c.innerHTML = `
+      <div class="col-span-full text-center py-8 text-xs text-[var(--muted-foreground)] border border-dashed border-[var(--border)] rounded-xl bg-[var(--background)]">
+        Belum ada sinyal yang mencukupi untuk membuat paket parlay pada filter liga saat ini.<br>
+        <button class="btn-primary mt-2.5 py-1 px-3 text-[11px]" onclick="filterLeague('all')">Lihat Semua Top 10 Liga</button>
+      </div>`;
+    return;
+  }
+
+  // 1. Safe 2-Leg: Ambil 2 pick dengan Win Rate probabilitas tertinggi
+  const safeSorted = verifiedPicks.slice().sort((a, b) => b.winRate - a.winRate);
+  const safeLegs = safeSorted.slice(0, 2);
+  const safeTotalOdds = +(safeLegs[0].odds * safeLegs[1].odds).toFixed(2);
+  const safeProb = +((safeLegs[0].winRate * safeLegs[1].winRate) / 100).toFixed(1);
+
+  // 2. Value Booster 3-Leg: Ambil 3 pick dengan Nilai EV tertinggi
+  const valueSorted = verifiedPicks.slice().sort((a, b) => b.ev - a.ev);
+  const valueLegs = valueSorted.slice(0, Math.min(3, valueSorted.length));
+  const valueTotalOdds = +(valueLegs.reduce((acc, l) => acc * l.odds, 1)).toFixed(2);
+
+  window._lastParlayPackages = {
+    safe: { title: 'Paket 2-Leg Safe Parlay (Eropa)', totalOdds: safeTotalOdds, legs: safeLegs },
+    value: { title: 'Paket 3-Leg Value Booster Parlay', totalOdds: valueTotalOdds, legs: valueLegs }
+  };
+
+  c.innerHTML = `
+    <!-- Paket 1: 2-Leg Safe Parlay -->
+    <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-2.5 text-xs shadow-xs">
+      <div class="flex items-center justify-between flex-wrap gap-1 border-b border-[var(--border)] pb-2">
+        <div>
+          <span class="font-black text-emerald-600 flex items-center gap-1">🛡️ Paket 2-Leg Safe Parlay (Eropa)</span>
+          <span class="text-[10px] text-[var(--muted-foreground)]">Kombinasi 2 Sinyal Paling Aman (Peluang ${safeProb}%)</span>
+        </div>
+        <span class="font-mono font-bold text-primary text-base">Total Odds: @${safeTotalOdds}</span>
+      </div>
+      <div class="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] space-y-2 text-[11px]">
+        ${safeLegs.map((l, i) => `
+          <div class="flex items-center justify-between border-b border-[var(--border)] last:border-b-0 pb-1.5 last:pb-0">
+            <div>
+              <div class="font-bold text-[11.5px]">${i+1}. ${l.f.home} (${l.f.homeRank || getTeamRank(l.f.home)}) vs ${l.f.away} (${l.f.awayRank || getTeamRank(l.f.away)})</div>
+              <div class="text-[10px] text-emerald-600 font-semibold">${l.label} · <span class="opacity-80">${l.winRate}% Peluang</span></div>
+            </div>
+            <div class="text-right">
+              <span class="font-mono font-black text-primary">@${l.odds}</span>
+              <div class="text-[9px] text-[var(--muted-foreground)]">+${l.ev}% EV</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold" onclick="saveParlayToTracker('safe')">
+        <span>💾 Simpan Tiket Parlay ke Tracker</span>
+      </button>
+    </div>
+
+    <!-- Paket 2: 3-Leg Value Booster Parlay -->
+    <div class="p-3.5 rounded-xl border border-[var(--border)] bg-[var(--background)] space-y-2.5 text-xs shadow-xs">
+      <div class="flex items-center justify-between flex-wrap gap-1 border-b border-[var(--border)] pb-2">
+        <div>
+          <span class="font-black text-purple-600 dark:text-purple-400 flex items-center gap-1">🌟 Paket 3-Leg Value Booster</span>
+          <span class="text-[10px] text-[var(--muted-foreground)]">3 Sinyal dengan Edge Matematis Tertinggi (+% EV)</span>
+        </div>
+        <span class="font-mono font-bold text-primary text-base">Total Odds: @${valueTotalOdds}</span>
+      </div>
+      <div class="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] space-y-2 text-[11px]">
+        ${valueLegs.map((l, i) => `
+          <div class="flex items-center justify-between border-b border-[var(--border)] last:border-b-0 pb-1.5 last:pb-0">
+            <div>
+              <div class="font-bold text-[11.5px]">${i+1}. ${l.f.home} (${l.f.homeRank || getTeamRank(l.f.home)}) vs ${l.f.away} (${l.f.awayRank || getTeamRank(l.f.away)})</div>
+              <div class="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">${l.label} · <span class="opacity-80">${l.winRate}% Peluang</span></div>
+            </div>
+            <div class="text-right">
+              <span class="font-mono font-black text-primary">@${l.odds}</span>
+              <div class="text-[9px] font-bold text-emerald-600">+${l.ev}% EV</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold" onclick="saveParlayToTracker('value')">
+        <span>💾 Simpan Tiket Parlay ke Tracker</span>
+      </button>
+    </div>
+  `;
+}
+
+function saveParlayToTracker(pkgType) {
+  const pkg = window._lastParlayPackages && window._lastParlayPackages[pkgType];
+  if (!pkg || !pkg.legs || pkg.legs.length === 0) {
+    alert('Tidak ada tiket parlay aktif untuk disimpan.');
+    return;
+  }
+  const matchDesc = pkg.legs.map((l, i) => (i+1) + '. ' + l.f.home + ' vs ' + l.f.away + ' (' + l.label + ' @' + l.odds + ')').join(' | ');
+  const defaultStake = 100000;
+  const bet = {
+    id: 'parlay_' + Date.now(),
+    match: '[PARLAY] ' + pkg.title + ': ' + matchDesc,
+    type: 'parlay',
+    odds: pkg.totalOdds,
+    stake: defaultStake,
+    status: 'pending',
+    date: new Date().toISOString()
+  };
+
+  userBets.unshift(bet);
+  localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+  syncBetToCloud(bet);
+  renderBetKPIs();
+  renderBetHistory();
+  showAppDialog({
+    icon: '🎉',
+    title: 'Tiket Parlay Disimpan!',
+    message: 'Tiket <strong>' + pkg.title + '</strong> (Total Odds @' + pkg.totalOdds + ') berhasil disimpan ke Tracker Bet & Bankroll.',
+    type: 'alert',
+    confirmText: 'Mengerti'
+  });
+}
+
+// ══════════════════════════════════════════════
+// MODAL & LIVE SYNC ENGINE
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+// CUSTOM CENTERED MODAL DIALOG ENGINE
+// ══════════════════════════════════════════════
+function showAppDialog({ title, message, icon = 'ℹ️', type = 'alert', confirmText = 'OK', cancelText = 'Batal', onConfirm = null }) {
+  const modal = document.getElementById('custom-dialog-modal');
+  if (!modal) {
+    if (type === 'confirm') {
+      if (confirm(message) && typeof onConfirm === 'function') onConfirm();
+    } else {
+      alert(message);
+    }
+    return;
+  }
+  document.getElementById('custom-dialog-icon').textContent = icon;
+  document.getElementById('custom-dialog-title').textContent = title;
+  document.getElementById('custom-dialog-message').innerHTML = message.replace(/\n/g, '<br>');
+  const btnContainer = document.getElementById('custom-dialog-buttons');
+
+  if (type === 'confirm') {
+    btnContainer.innerHTML = `
+      <button type="button" id="custom-dialog-cancel-btn" class="btn-sm py-2 px-4 text-xs w-1/2">
+        ${cancelText}
+      </button>
+      <button type="button" id="custom-dialog-confirm-btn" class="btn-primary py-2 px-4 text-xs w-1/2 bg-rose-600 hover:bg-rose-700 text-white font-bold">
+        ${confirmText}
+      </button>
+    `;
+    document.getElementById('custom-dialog-cancel-btn').onclick = () => {
+      modal.style.display = 'none';
+    };
+    document.getElementById('custom-dialog-confirm-btn').onclick = () => {
+      modal.style.display = 'none';
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+  } else {
+    btnContainer.innerHTML = `
+      <button type="button" id="custom-dialog-ok-btn" class="btn-primary py-2 px-6 text-xs w-full font-bold">
+        ${confirmText}
+      </button>
+    `;
+    document.getElementById('custom-dialog-ok-btn').onclick = () => {
+      modal.style.display = 'none';
+      if (typeof onConfirm === 'function') onConfirm();
+    };
+  }
+
+  modal.style.display = 'flex';
+}
+
+function openOddsModal() {
+  document.getElementById('odds-modal').style.display = 'flex';
+}
+function closeOddsModal() {
+  document.getElementById('odds-modal').style.display = 'none';
+}
+
+// ══════════════════════════════════════════════════════
+// REAL-TIME LIVE SCORE & MINUTE SYNC ENGINE (API-SPORTS)
+// ══════════════════════════════════════════════════════
+async function syncLiveScores() {
+  try {
+    const key = (document.getElementById('api-key-input')?.value || CURRENT_PRO_KEY).trim();
+    const resp = await fetch(`${APISPORTS_HOST}/fixtures?live=all`, {
+      headers: { 'x-apisports-key': key }
+    });
+    const json = await resp.json();
+    const liveMatches = json.response || [];
+    if (!liveMatches.length) return;
+
+    let updatedPicks = false;
+    let updatedBets = false;
+
+    for (const m of liveMatches) {
+      // 1. Sinkronkan ke jadwal sinyal sistem (allFixtures)
+      const f = allFixtures.find(fix => fix.id === m.fixture.id || (
+        fix.home.toLowerCase() === m.teams.home.name.toLowerCase() &&
+        fix.away.toLowerCase() === m.teams.away.name.toLowerCase()
+      ));
+
+      if (f) {
+        f.liveHomeScore = m.goals.home;
+        f.liveAwayScore = m.goals.away;
+        f.liveElapsed = m.fixture.status.elapsed;
+        f.status = m.fixture.status.short;
+        f.isLive = true;
+        updatedPicks = true;
+      }
+
+      // 2. Sinkronkan ke tiket Bankroll yang sedang berjalan (Pending)
+      if (typeof userBets !== 'undefined' && userBets.length) {
+        userBets.forEach(b => {
+          if (b.status === 'pending') {
+            const bHome = (b.home || '').toLowerCase();
+            const bAway = (b.away || '').toLowerCase();
+            const mHome = m.teams.home.name.toLowerCase();
+            const mAway = m.teams.away.name.toLowerCase();
+            if ((bHome.includes(mHome) || mHome.includes(bHome)) &&
+                (bAway.includes(mAway) || mAway.includes(bAway))) {
+              b.liveHomeScore = m.goals.home;
+              b.liveAwayScore = m.goals.away;
+              b.liveElapsed = m.fixture.status.elapsed;
+              b.liveStatus = m.fixture.status.short;
+              b.isLive = true;
+              updatedBets = true;
+            }
+          }
+        });
+      }
+    }
+
+    if (updatedPicks) renderValuePicks();
+    if (updatedBets) {
+      localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+      renderBetHistory();
+    }
+  } catch (err) {
+    console.warn('Live Score sync warning:', err.message);
+  }
+}
+
+async function syncTop5Odds(showAlert) {
+  const syncBtn = document.querySelector("button[onclick='syncTop5Odds(true)']");
+  const headerStatus = document.getElementById('status-text');
+  const headerBadge = document.getElementById('header-1xbet-text');
+
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '⏳ Menyinkronkan...';
+  }
+  if (headerStatus) headerStatus.textContent = '⏳ Mengunduh Live Klasemen & Odds dari API-Sports...';
+
+  try {
+    const key = (document.getElementById('api-key-input')?.value || CURRENT_PRO_KEY).trim();
+    let totalUpdated = 0;
+
+    // Fetch live standings dan fixtures selesai (FT) dari API-Sports untuk Top 10 Liga Season 2026
+    for (const lg of TOP10_LEAGUES) {
+      try {
+        const [respStd, respFt] = await Promise.all([
+          fetch(`${APISPORTS_HOST}/standings?league=${lg.id}&season=2026`, { headers: { 'x-apisports-key': key } }),
+          fetch(`${APISPORTS_HOST}/fixtures?league=${lg.id}&season=2026&status=FT`, { headers: { 'x-apisports-key': key } })
+        ]);
+        const resJson = await respStd.json();
+        const ftJson = await respFt.json();
+        const ftMatches = (ftJson && ftJson.response) ? ftJson.response : [];
+        if (ftMatches.length) autoArchiveFinishedSignals(ftMatches);
+
+        if (resJson.response && resJson.response[0]?.league?.standings?.[0]) {
+          const st = resJson.response[0].league.standings[0];
+          st.forEach(row => {
+            const apiName = row.team.name;
+            const rk = row.rank;
+            const pl = row.all.played;
+            const gf = row.all.goals.for;
+            const ga = row.all.goals.against;
+            const pts = row.points;
+
+            // Hitung exact 5 laga terakhir dari fixtures FT riil tanpa estimasi
+            const teamFT = ftMatches.filter(m => m.teams.home.id === row.team.id || m.teams.away.id === row.team.id)
+              .sort((a,b) => new Date(b.fixture.date) - new Date(a.fixture.date));
+            const last5 = teamFT.slice(0, 5);
+            let gf5 = 0, ga5 = 0;
+            let formArr = [];
+            last5.forEach(m => {
+              const isH = m.teams.home.id === row.team.id;
+              const scored = isH ? m.goals.home : m.goals.away;
+              const conceded = isH ? m.goals.away : m.goals.home;
+              gf5 += (scored || 0);
+              ga5 += (conceded || 0);
+              formArr.push(scored > conceded ? 'W' : scored === conceded ? 'D' : 'L');
+            });
+
+            const statObj = {
+              played: pl,
+              gf: gf,
+              ga: ga,
+              pts: pts,
+              form5: {
+                gf: last5.length ? gf5 : Math.round((gf * 5) / Math.max(1, pl)),
+                ga: last5.length ? ga5 : Math.round((ga * 5) / Math.max(1, pl)),
+                form: formArr.length ? formArr.join('-') : (row.form || 'D-D-D-D-D').split('').join('-')
+              }
+            };
+
+            TEAM_STANDINGS[apiName] = rk;
+            TEAM_STATS[apiName] = statObj;
+
+            // Map ke nama tim pada fixtures
+            for (const f of allFixtures) {
+              const hLower = f.home.toLowerCase();
+              const aLower = f.away.toLowerCase();
+              const apiLower = apiName.toLowerCase();
+
+              if (hLower === apiLower || apiLower.includes(hLower) || hLower.includes(apiLower)) {
+                TEAM_STANDINGS[f.home] = rk;
+                TEAM_STATS[f.home] = statObj;
+              }
+              if (aLower === apiLower || apiLower.includes(aLower) || aLower.includes(apiLower)) {
+                TEAM_STANDINGS[f.away] = rk;
+                TEAM_STATS[f.away] = statObj;
+              }
+            }
+            totalUpdated++;
+          });
+        }
+      } catch (errLg) {
+        console.warn(`Gagal sync liga ${lg.name}:`, errLg);
+      }
+    }
+
+    // Update seluruh rank fixtures secara dinamis dari data live terbaru
+    await syncLiveScores();
+    allFixtures.forEach(f => {
+      f.homeRank = getTeamRank(f.home);
+      f.awayRank = getTeamRank(f.away);
+    });
+
+    // Simpan cache live data ke browser localStorage
+    localStorage.setItem('top10_live_standings_v1', JSON.stringify(TEAM_STANDINGS));
+    localStorage.setItem('top10_live_stats_v1', JSON.stringify(TEAM_STATS));
+    localStorage.setItem('top10_last_sync_time', new Date().toISOString());
+
+    // Re-render antarmuka dengan statistik live riil terbaru
+    renderAllViews();
+
+    const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    if (headerStatus) headerStatus.textContent = `Live API-Sports Aktif (Update: ${timeStr} WIB)`;
+    if (headerBadge) headerBadge.textContent = `⚡ 1xBet & API-Sports Live: ${totalUpdated} Klub Terverifikasi`;
+
+    if (showAlert) {
+      showAppDialog({
+        icon: '✅',
+        title: 'Sinkronisasi Live Berhasil!',
+        message: 'Berhasil menyinkronkan ' + totalUpdated + ' klub dari Top 10 Liga Dunia secara LIVE! Seluruh peringkat dan gol 5 laga terakhir terverifikasi 100% data riil.',
+        type: 'alert',
+        confirmText: 'Selesai'
+      });
+    }
+  } catch (err) {
+    console.error('Sync error:', err);
+    if (headerStatus) headerStatus.textContent = '❌ Sinkronisasi Gagal. Periksa koneksi API.';
+    if (showAlert) alert('Gagal menyinkronkan data: ' + err.message);
+  } finally {
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '🔄 Auto-Sync';
+    }
+  }
+}
+
+
+// ══════════════════════════════════════════════════════
+// SIGNAL HISTORY & 4-DAY AUTO-PURGE ENGINE
+// ══════════════════════════════════════════════════════
+const SIGNAL_HISTORY_KEY = 'top10_signal_history_v5';
+const SIGNAL_RETENTION_MS = 4 * 24 * 60 * 60 * 1000;
+let histFilterStatus = 'all'; // 96 jam / 4 hari tepat
+
+// HISTORI MURNI: Hanya mencatat pertandingan yang PERNAH masuk ke sinyal sistem kita
+// Begitu pertandingan di Tab 1 selesai (FT), sinyalnya otomatis pindah ke sini selama 4 hari.
+
+function getSignalHistory() {
+  let list = [];
+  try {
+    const raw = localStorage.getItem(SIGNAL_HISTORY_KEY);
+    if (raw) {
+      list = JSON.parse(raw);
+    }
+  } catch (e) {
+    list = [];
+  }
+  return purgeExpiredSignals(list);
+}
+
+function saveSignalHistory(list) {
+  try {
+    localStorage.setItem(SIGNAL_HISTORY_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.error('Gagal menyimpan signal history:', e);
+  }
+}
+
+function clearSignalHistory() {
+  showAppDialog({
+    icon: '🗑️',
+    title: 'Reset Histori Sinyal',
+    message: 'Apakah Anda yakin ingin mengosongkan seluruh arsip histori sinyal?',
+    type: 'confirm',
+    confirmText: 'Ya, Kosongkan',
+    cancelText: 'Batal',
+    onConfirm: () => {
+      saveSignalHistory([]);
+      renderSignalHistoryView();
+    }
+  });
+}
+
+function purgeExpiredSignals(list) {
+  const now = Date.now();
+  const valid = list.filter(item => {
+    const matchTime = new Date(item.finishedAt || item.matchDate).getTime();
+    return !isNaN(matchTime) && (now - matchTime) <= SIGNAL_RETENTION_MS;
+  });
+  if (valid.length !== list.length) {
+    saveSignalHistory(valid);
+  }
+  return valid;
+}
+
+function getSignalExpiryBadge(item) {
+  const now = Date.now();
+  const matchTime = new Date(item.finishedAt || item.matchDate).getTime();
+  const remainingMs = (matchTime + SIGNAL_RETENTION_MS) - now;
+  if (remainingMs <= 0) return 'Kedaluwarsa';
+  const totalHours = Math.floor(remainingMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const remHours = totalHours % 24;
+  if (days > 0) return `⏳ ${days}h ${remHours}j lagi`;
+  return `⏳ ${totalHours}j lagi`;
+}
+
+function formatSignalDate(dateInput) {
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const day = d.getDate();
+  const month = d.toLocaleDateString('id-ID', { month: 'short' });
+  const time = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace(':', '.');
+  return `${day} ${month}, ${time}`;
+}
+
+function setHistFilterStatus(status) {
+  histFilterStatus = status;
+  ['all', 'won', 'lost', 'refund'].forEach(s => {
+    document.getElementById(`hist-btn-${s}`)?.classList.toggle('active', s === status);
+  });
+  renderSignalHistoryCards();
+}
+
+function getScopedSignals() {
+  const allSignals = getSignalHistory();
+  const stratFilter = document.getElementById('hist-strategy-select')?.value || 'all';
+  const leagueFilter = document.getElementById('hist-league-select')?.value || 'all';
+  const searchQuery = (document.getElementById('hist-search-input')?.value || '').trim().toLowerCase();
+
+  return allSignals.filter(item => {
+    if (stratFilter !== 'all' && item.strategyKey !== stratFilter) return false;
+    if (leagueFilter !== 'all' && item.leagueCode !== leagueFilter) return false;
+    if (searchQuery) {
+      const matchText = `${item.home} ${item.away} ${item.label} ${item.leagueName}`.toLowerCase();
+      if (!matchText.includes(searchQuery)) return false;
+    }
+    return true;
+  });
+}
+
+function renderSignalHistoryView() {
+  // Ambil sinyal sesuai filter Strategi & Liga yang aktif (Gambar 2)
+  const scopeSignals = getScopedSignals();
+
+  // Hitung ulang metrik KPI di Kotak Merah (Gambar 1) secara dinamis & otomatis
+  const wonCount = scopeSignals.filter(s => s.status === 'won').length;
+  const lostCount = scopeSignals.filter(s => s.status === 'lost').length;
+  const refundCount = scopeSignals.filter(s => s.status === 'refund').length;
+  const totalSettled = wonCount + lostCount;
+  const winRate = totalSettled > 0 ? ((wonCount / totalSettled) * 100).toFixed(1) : 0;
+
+  // Update elemen KPI Kotak Merah
+  const kTotal = document.getElementById('kpi-hist-total');
+  const kWinRate = document.getElementById('kpi-hist-winrate');
+  const kWon = document.getElementById('kpi-hist-won');
+  const kLost = document.getElementById('kpi-hist-lost');
+  const kRefund = document.getElementById('kpi-hist-refund');
+  const kBadge = document.getElementById('hist-total-badge');
+
+  if (kTotal) kTotal.textContent = `${scopeSignals.length} Sinyal`;
+  if (kWinRate) kWinRate.textContent = `${winRate}%`;
+  if (kWon) kWon.textContent = `${wonCount} Laga`;
+  if (kLost) kLost.textContent = `${lostCount} Laga`;
+  if (kRefund) kRefund.textContent = `${refundCount} Laga`;
+
+  const stratFilter = document.getElementById('hist-strategy-select')?.value || 'all';
+  if (kBadge) {
+    const stratName = stratFilter !== 'all' ? (STRATEGY_PRESETS[stratFilter]?.shortName || stratFilter) : 'Semua Strategi';
+    kBadge.textContent = `🛡️ ${scopeSignals.length} Sinyal (${stratName})`;
+  }
+
+  // Update angka pada chip filter status (Semua, Tembus, Meleset, Refund)
+  const bAll = document.getElementById('hist-cnt-all');
+  const bWon = document.getElementById('hist-cnt-won');
+  const bLost = document.getElementById('hist-cnt-lost');
+  const bRef = document.getElementById('hist-cnt-refund');
+  if (bAll) bAll.textContent = scopeSignals.length;
+  if (bWon) bWon.textContent = wonCount;
+  if (bLost) bLost.textContent = lostCount;
+  if (bRef) bRef.textContent = refundCount;
+
+  renderSignalHistoryCards(scopeSignals);
+}
+
+function renderSignalHistoryCards(scopeSignals) {
+  const container = document.getElementById('hist-signals-container');
+  const emptyState = document.getElementById('hist-empty-state');
+  if (!container) return;
+
+  const currentScope = scopeSignals || getScopedSignals();
+
+  // Filter berdasarkan status (Semua, Tembus, Meleset, Refund)
+  let filtered = currentScope.filter(item => {
+    if (histFilterStatus !== 'all' && item.status !== histFilterStatus) return false;
+    return true;
+  });
+
+  // Urutkan sinyal terbaru di atas
+  filtered.sort((a, b) => new Date(b.finishedAt || b.matchDate).getTime() - new Date(a.finishedAt || a.matchDate).getTime());
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    if (emptyState) emptyState.classList.remove('hidden');
+    return;
+  }
+  if (emptyState) emptyState.classList.add('hidden');
+
+  container.innerHTML = filtered.map(item => {
+    const isWon = item.status === 'won';
+    const isRefund = item.status === 'refund';
+    
+    // Status badges & color styling
+    let cardBorder = 'border-[var(--border)]';
+    let resultBadgeClass = 'bg-rose-500/10 text-rose-600 border border-rose-500/30';
+    let resultText = '❌ MELESET';
+    let payoutText = '-Rp 100.000';
+    let payoutColor = 'text-rose-600';
+    let scoreColor = 'text-[var(--foreground)]';
+
+    if (isWon) {
+      cardBorder = 'border-emerald-300/40 dark:border-emerald-800/40';
+      resultBadgeClass = 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30 shadow-2xs';
+      resultText = '✅ TEMBUS (WIN)';
+      const profit = Math.round((Number(item.odds || 1.6) - 1) * 100000);
+      payoutText = `+Rp ${profit.toLocaleString('id-ID')} / 100k`;
+      payoutColor = 'text-emerald-600 font-black';
+      scoreColor = 'text-emerald-600';
+    } else if (isRefund) {
+      cardBorder = 'border-amber-300/40 dark:border-amber-800/40';
+      resultBadgeClass = 'bg-amber-500/10 text-amber-600 border border-amber-500/30';
+      resultText = '🔄 REFUND (SERI)';
+      payoutText = 'Modal Kembali Rp 100k';
+      payoutColor = 'text-amber-600 font-bold';
+      scoreColor = 'text-amber-600';
+    }
+
+    const expiryPill = getSignalExpiryBadge(item);
+    const dateFormatted = formatSignalDate(item.matchDate);
+
+    const isHomeWinner = item.homeScore > item.awayScore;
+    const isAwayWinner = item.awayScore > item.homeScore;
+
+    return `
+      <div class="p-3.5 rounded-xl border ${cardBorder} bg-[var(--card)] hover:border-primary/50 transition-all shadow-2xs space-y-2.5 relative flex flex-col justify-between">
+        
+        <!-- Baris 1: Header Liga, Tanggal, & Expiry Countdown -->
+        <div class="flex items-center justify-between text-[11px] gap-1">
+          <div class="flex items-center gap-1.5 text-[var(--muted-foreground)] font-medium truncate">
+            <span>${item.leagueFlag} ${item.leagueCode}</span>
+            <span>•</span>
+            <span class="truncate">${dateFormatted}</span>
+          </div>
+          <span class="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-[var(--muted)] text-[var(--muted-foreground)] border border-[var(--border)] shrink-0" title="Sinyal otomatis terhapus setelah 4 hari (96 jam)">
+            ${expiryPill}
+          </span>
+        </div>
+
+        <!-- Baris 2: Skor Pertandingan (FT) -->
+        <div class="flex items-center justify-between bg-[var(--background)] px-2.5 py-2 rounded-lg border border-[var(--border)]">
+          <div class="flex-1 text-right font-bold text-xs truncate ${isHomeWinner ? 'text-primary font-black' : ''}">
+            ${item.home}
+          </div>
+          <div class="px-2.5 shrink-0 flex flex-col items-center">
+            <div class="font-black text-sm tracking-wider font-mono ${scoreColor}">
+              ${item.homeScore} - ${item.awayScore}
+            </div>
+            <span class="text-[8.5px] uppercase tracking-wider text-[var(--muted-foreground)] font-bold">FULL TIME</span>
+          </div>
+          <div class="flex-1 text-left font-bold text-xs truncate ${isAwayWinner ? 'text-primary font-black' : ''}">
+            ${item.away}
+          </div>
+        </div>
+
+        <!-- Baris 3: Rekomendasi Sinyal & Status Tembus/Meleset -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between gap-1 text-xs">
+            <div class="flex items-center gap-1.5 font-bold truncate">
+              <span>${item.icon}</span>
+              <span class="truncate">${item.label}</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[9.5px] font-black shrink-0 ${resultBadgeClass}">
+              ${resultText}
+            </span>
+          </div>
+
+          <!-- Baris 4: Metrik Peluang, Odds & Value EV -->
+          <div class="grid grid-cols-3 gap-1 pt-0.5 text-center text-[10px]">
+            <div class="p-1 rounded bg-[var(--muted)] border border-[var(--border)]">
+              <span class="text-[9px] text-[var(--muted-foreground)] block">Odds</span>
+              <strong class="font-mono text-xs">${Number(item.odds || 1.6).toFixed(2)}</strong>
+            </div>
+            <div class="p-1 rounded bg-[var(--muted)] border border-[var(--border)]">
+              <span class="text-[9px] text-[var(--muted-foreground)] block">Peluang</span>
+              <strong class="font-mono text-xs text-primary">${item.winRate || 65}%</strong>
+            </div>
+            <div class="p-1 rounded bg-[var(--muted)] border border-[var(--border)]">
+              <span class="text-[9px] text-[var(--muted-foreground)] block">Value EV</span>
+              <strong class="font-mono text-xs text-emerald-600">+${item.ev || 10}%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Baris 5: Footer Strategi & Simulasi Payout -->
+        <div class="pt-1.5 border-t border-[var(--border)] flex items-center justify-between text-[10px] text-[var(--muted-foreground)]">
+          <span class="truncate">Strategi: <strong class="text-[var(--foreground)]">${item.strategyName}</strong></span>
+          <span class="${payoutColor} font-mono font-bold shrink-0">${payoutText}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Otomatis pindahkan sinyal yang SELESAI (FT) dari Tab 1 ke Tab Histori Sinyal
+function autoArchiveFinishedSignals(ftMatches) {
+  if (!ftMatches || !ftMatches.length) return;
+  const history = getSignalHistory();
+  const existingIds = new Set(history.map(h => String(h.fixtureId || h.id)));
+  let added = 0;
+  let betsUpdated = 0;
+
+  for (const f of allFixtures) {
+    const m = ftMatches.find(ft => ft.fixture.id === f.id || (
+      ft.teams.home.name.toLowerCase() === f.home.toLowerCase() &&
+      ft.teams.away.name.toLowerCase() === f.away.toLowerCase()
+    ));
+
+    if (m && m.goals.home !== null && m.goals.away !== null) {
+      const fid = String(m.fixture.id || f.id);
+      const hScore = m.goals.home;
+      const aScore = m.goals.away;
+
+      // 1. Jika pertandingan ini ada di tiket Bankroll yang pending: otomatis selesaikan!
+      const bankrollBet = getActiveBankrollBet(f.home, f.away);
+      if (bankrollBet) {
+        let bStatus = 'lost';
+        if (bankrollBet.type === 'home' || bankrollBet.type === 'home_dnb') {
+          if (bankrollBet.type === 'home_dnb' && hScore === aScore) bStatus = 'refund';
+          else if (hScore > aScore) bStatus = 'won';
+        } else if (bankrollBet.type === 'away' || bankrollBet.type === 'away_dnb') {
+          if (bankrollBet.type === 'away_dnb' && hScore === aScore) bStatus = 'refund';
+          else if (aScore > hScore) bStatus = 'won';
+        } else if (bankrollBet.type === '1x') {
+          if (hScore >= aScore) bStatus = 'won';
+        } else if (bankrollBet.type === 'x2') {
+          if (aScore >= hScore) bStatus = 'won';
+        } else if (bankrollBet.type === 'draw') {
+          if (hScore === aScore) bStatus = 'won';
+        }
+
+        bankrollBet.status = bStatus;
+        betsUpdated++;
+      }
+
+      // 2. Arsipkan ke Histori Sinyal jika belum tercatat
+      if (!existingIds.has(fid) && !existingIds.has('hist_' + fid)) {
+        const opp = evaluateTop5Market(f);
+        let best = opp ? resolveTop5WorthItPick(opp, f) : null;
+        
+        // Jika ada di bankroll, pastikan tetap diarsipkan dengan data taruhan user
+        if (!best && bankrollBet) {
+          best = {
+            strategyKey: 'user_bet',
+            strategyName: 'Taruhan Bankroll',
+            icon: '💼',
+            label: bankrollBet.typeLabel || `${f.home} Win`,
+            odds: bankrollBet.odds,
+            winRate: 65,
+            ev: 10,
+            side: bankrollBet.type
+          };
+        }
+
+        if (best) {
+          let status = 'lost';
+          if (best.side === 'home') {
+            if (best.type === 'dnb' && hScore === aScore) status = 'refund';
+            else if (hScore > aScore) status = 'won';
+          } else if (best.side === 'away') {
+            if (best.type === 'dnb' && hScore === aScore) status = 'refund';
+            else if (aScore > hScore) status = 'won';
+          } else if (best.side === '1x') {
+            if (hScore >= aScore) status = 'won';
+          } else if (best.side === 'x2') {
+            if (aScore >= hScore) status = 'won';
+          } else if (best.side === 'draw') {
+            if (hScore === aScore) status = 'won';
+          }
+
+          const sigRecord = {
+            id: 'hist_' + fid,
+            fixtureId: f.id,
+            leagueName: f.leagueName,
+            leagueCode: f.leagueCode,
+            leagueFlag: f.leagueFlag,
+            home: f.home,
+            away: f.away,
+            homeScore: hScore,
+            awayScore: aScore,
+            matchDate: f.date,
+            finishedAt: m.fixture.date || new Date().toISOString(),
+            strategyKey: best.strategyKey,
+            strategyName: best.strategyName || (typeof STRATEGY_PRESETS !== 'undefined' ? STRATEGY_PRESETS[best.strategyKey]?.name : best.strategyKey),
+            icon: best.icon,
+            label: best.label,
+            odds: best.odds,
+            winRate: best.winRate,
+            ev: best.ev,
+            status: status,
+            wasInBankroll: !!bankrollBet
+          };
+
+          history.unshift(sigRecord);
+          existingIds.add(fid);
+          added++;
+        }
+      }
+
+      // 3. Tandai fixture sebagai selesai agar keluar dari Tab 1
+      f.isFinished = true;
+      f.status = 'FT';
+      f.homeScore = m.goals.home;
+      f.awayScore = m.goals.away;
+    }
+  }
+
+  if (betsUpdated > 0) {
+    localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
+    userBets.forEach(b => { if (b.status === 'won' || b.status === 'lost') syncBetToCloud(b); });
+    renderBetKPIs();
+    renderBetHistory();
+  }
+
+  if (added > 0) {
+    saveSignalHistory(history);
+    renderSignalHistoryView();
+  }
+
+  renderValuePicks();
+}
+
+function renderAllViews() {
+  renderStrategyPresetsGrid();
+  renderValuePicks();
+  populateMatchSelect();
+  renderBetKPIs();
+  renderBetHistory();
+  renderSignalHistoryView();
+  renderCompoundView();
+  renderSmartParlay();
+}
+
+// INIT
+window.addEventListener('DOMContentLoaded', () => {
+  // Bersihkan cache lama agar tidak ada laga retroaktif di histori
+  try {
+    localStorage.removeItem('top10_signal_history_v4');
+    localStorage.removeItem('top10_signal_history_v3');
+    localStorage.removeItem('top10_signal_history_v2');
+  } catch(e) {}
+
+  // 1. Muat cache live standings & stats dari localStorage jika ada
+  const savedStandings = localStorage.getItem('top10_live_standings_v1');
+  const savedStats = localStorage.getItem('top10_live_stats_v1');
+  if (savedStandings) {
+    try { Object.assign(TEAM_STANDINGS, JSON.parse(savedStandings)); } catch (e) {}
+  }
+  if (savedStats) {
+    try { Object.assign(TEAM_STATS, JSON.parse(savedStats)); } catch (e) {}
+  }
+  allFixtures.forEach(f => {
+    f.homeRank = getTeamRank(f.home);
+    f.awayRank = getTeamRank(f.away);
+  });
+
+  renderAllViews();
+
+  // 2. Jalankan Auto-Sync live ke server API-Sports jika belum pernah sync hari ini
+  // Jalankan sinkronisasi Live Score real-time secara berkala tiap 60 detik
+  setTimeout(syncLiveScores, 1500);
+  setInterval(() => { if (document.visibilityState === 'visible') syncLiveScores(); }, 60000);
+
+  const lastSync = localStorage.getItem('top10_last_sync_time');
+  if (!lastSync || (Date.now() - new Date(lastSync).getTime() > 3600000)) {
+    setTimeout(() => {
+      syncTop5Odds(false);
+    }, 1000);
+  }
+});
+</script>
+</body>
+</html>
