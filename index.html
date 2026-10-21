@@ -578,6 +578,7 @@ async function initBankrollCloudSync() {
     const { data, error } = await supabaseClient
       .from('bankroll_bets')
       .select('*')
+      .neq('league_code', 'LIGA1')
       .order('created_at', { ascending: false });
 
     if (!error && Array.isArray(data)) {
@@ -607,6 +608,7 @@ async function initBankrollCloudSync() {
     supabaseClient.channel('realtime_bankroll_bets')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bankroll_bets' }, (payload) => {
         console.log('⚡ Realtime Cloud Event:', payload.eventType, payload);
+        if (payload.new && payload.new.league_code === 'LIGA1') return;
         if (payload.eventType === 'INSERT') {
           const newBet = rowToBet(payload.new);
           if (!userBets.some(b => b.id === newBet.id)) {
@@ -5007,10 +5009,35 @@ function renderValuePicks() {
     const bankrollBet = getActiveBankrollBet(f.home, f.away);
 
     if (bankrollBet) {
-      let pickData = null;
-      if (opp) {
-        pickData = resolveTop5WorthItPick(opp, f);
+      // Tentukan strategi asli dari taruhan bankroll ini
+      const bType = bankrollBet.type || '';
+      let betStrategyKey = bankrollBet.strategyKey;
+      if (!betStrategyKey) {
+        if (bType.includes('dnb')) betStrategyKey = 'dnb';
+        else if (bType === '1x' || bType === 'x2') betStrategyKey = 'double_chance';
+        else if (bType === 'high_odds' || (bankrollBet.odds >= 2.5 && opp?.highOddsSniper)) betStrategyKey = 'high_odds_sniper';
+        else if (opp?.homeFortress && f.home.toLowerCase() === (bankrollBet.home || '').toLowerCase()) betStrategyKey = 'home_fortress';
+        else betStrategyKey = 'favorit_emas';
       }
+
+      // ATURAN MUTLAK: Laga yang di-bankroll HANYA boleh muncul di tab strateginya sendiri!
+      if (betStrategyKey !== currentStrategyPreset) {
+        return; // Jangan bocor ke tab strategi lain!
+      }
+
+      let pickData = null;
+      if (currentStrategyPreset === 'dnb' && opp?.dnbValue) {
+        pickData = { ...opp.dnbValue, strategyKey: 'dnb', icon: '🔄', badge: 'DNB REFUND', badgeColor: 'bg-teal-100 text-teal-700 dark:bg-teal-950 dark:text-teal-300' };
+      } else if (currentStrategyPreset === 'double_chance' && opp?.safetyNet) {
+        pickData = { ...opp.safetyNet, strategyKey: 'double_chance', icon: '🛡️', badge: 'PENGAMAN DC', badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300' };
+      } else if (currentStrategyPreset === 'home_fortress' && opp?.homeFortress) {
+        pickData = { ...opp.homeFortress, strategyKey: 'home_fortress', icon: '🏰', badge: 'BENTENG KANDANG', badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' };
+      } else if (currentStrategyPreset === 'high_odds_sniper' && opp?.highOddsSniper) {
+        pickData = { ...opp.highOddsSniper, strategyKey: 'high_odds_sniper', icon: '🎯', badge: 'HIGH ODDS SNIPER', badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300' };
+      } else if (opp?.favoriteValue) {
+        pickData = { ...opp.favoriteValue, strategyKey: 'favorit_emas', icon: '🌟', badge: 'FAVORIT EMAS', badgeColor: 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' };
+      }
+
       if (!pickData) {
         pickData = {
           type: bankrollBet.type,
@@ -5018,9 +5045,9 @@ function renderValuePicks() {
           winRate: 65,
           ev: 10,
           label: bankrollBet.typeLabel || `${f.home} Win`,
-          strategyKey: currentStrategyPreset || 'home_fortress',
-          icon: '💼',
-          badge: 'DI BANKROLL',
+          strategyKey: betStrategyKey,
+          icon: betStrategyKey === 'dnb' ? '🔄' : (betStrategyKey === 'double_chance' ? '🛡️' : '🌟'),
+          badge: betStrategyKey === 'dnb' ? 'DNB REFUND' : (betStrategyKey === 'double_chance' ? 'DOUBLE CHANCE' : 'FAVORIT EMAS'),
           badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300'
         };
       }
@@ -5144,7 +5171,7 @@ function renderValuePicks() {
             <span>Terkunci di Bankroll (Rp ${Number(p.bankrollBet.stake || 100000).toLocaleString('id-ID')} @${p.bankrollBet.odds})</span>
           </div>
         ` : `
-          <button type="button" onclick="quickBet('${p.f.home}', '${p.f.away}', '${p.side}', ${p.odds})" class="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold shadow-xs">
+          <button type="button" onclick="quickBet('${p.f.home}', '${p.f.away}', '${p.side}', ${p.odds}, '${p.strategyKey || currentStrategyPreset}')" class="btn-primary w-full py-2 text-xs flex items-center justify-center gap-1.5 font-bold shadow-xs">
             <span>⚡ Pasang @ ${p.odds}</span>
           </button>
         `)}
@@ -5173,7 +5200,7 @@ function renderValuePicks() {
   }
 }
 
-function quickBet(home, away, side, odds) {
+function quickBet(home, away, side, odds, strategyKey) {
   const sel = document.getElementById('bet-match-select');
   if (sel) {
     for (let i = 0; i < sel.options.length; i++) {
@@ -5184,9 +5211,17 @@ function quickBet(home, away, side, odds) {
     }
   }
   const typeSel = document.getElementById('bet-selection-type');
-  if (typeSel) typeSel.value = side.includes('x2') ? 'x2' : side.includes('1x') ? '1x' : side.includes('dnb') ? 'home_dnb' : 'home';
+  if (typeSel) {
+    if (side.includes('away_dnb')) typeSel.value = 'away_dnb';
+    else if (side.includes('home_dnb') || side.includes('dnb')) typeSel.value = 'home_dnb';
+    else if (side.includes('x2')) typeSel.value = 'x2';
+    else if (side.includes('1x')) typeSel.value = '1x';
+    else if (side === 'away') typeSel.value = 'away';
+    else typeSel.value = 'home';
+  }
   const oInp = document.getElementById('bet-odds-input');
   if (oInp) oInp.value = odds;
+  window._lastQuickBetStrategy = strategyKey || currentStrategyPreset;
   updateBetCalculator();
   document.getElementById('bet-form-card')?.scrollIntoView({ behavior: 'smooth' });
 }
@@ -5254,8 +5289,10 @@ function saveBetRecord() {
   else if (type === 'away_dnb') typeLabel = away ? `${away} DNB (Draw Refund)` : 'Away DNB';
   else if (type === 'home') typeLabel = home ? `${home} Win` : 'Home Win';
 
+  const strategyKey = window._lastQuickBetStrategy || (type.includes('dnb') ? 'dnb' : (type === '1x' || type === 'x2') ? 'double_chance' : currentStrategyPreset || 'favorit_emas');
   const bet = {
-    id: 'bet_' + Date.now(),
+    id: 'top10_bet_' + Date.now(),
+    strategyKey,
     match: matchText,
     home,
     away,
