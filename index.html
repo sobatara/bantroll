@@ -5240,7 +5240,7 @@ function populateMatchSelect() {
     const liveText = liveStatus.isLive ? ' [🔴 SEDANG TANDING - DITUTUP]' : '';
     const disabledAttr = liveStatus.isLive ? 'disabled style="color: #ef4444;"' : '';
     return `
-    <option value="${f.id}" ${disabledAttr} data-islive="${liveStatus.isLive}" data-league="${f.leagueCode}" data-home="${f.home}" data-away="${f.away}" data-date="${dStr}, ${tStr}" data-odds-h="${f.odds?.h || ''}" data-odds-d="${f.odds?.d || ''}" data-odds-a="${f.odds?.a || ''}">
+    <option value="${f.id}" ${disabledAttr} data-islive="${liveStatus.isLive}" data-matchdate="${f.date}" data-league="${f.leagueCode}" data-home="${f.home}" data-away="${f.away}" data-date="${dStr}, ${tStr}" data-odds-h="${f.odds?.h || ''}" data-odds-d="${f.odds?.d || ''}" data-odds-a="${f.odds?.a || ''}">
       ${f.home} vs ${f.away} ( ${dStr}, ${tStr} )${liveText}
     </option>`;
   }).join('');
@@ -5263,6 +5263,7 @@ function saveBetRecord() {
   const dateStr = opt?.dataset?.date || '';
   const leagueCode = opt?.dataset?.league || '';
   const matchText = home && away ? `${home} vs ${away}` : (opt?.text || 'Top 5 Match');
+  const matchDate = opt?.dataset?.matchdate || '';
   const isLive = opt?.dataset?.islive === 'true';
   if (isLive) {
     showAppDialog({
@@ -5297,6 +5298,7 @@ function saveBetRecord() {
     home,
     away,
     dateStr,
+    matchDate,
     leagueCode,
     type,
     typeLabel,
@@ -5343,6 +5345,40 @@ function renderBetKPIs() {
   document.getElementById('kpi-roi').textContent = (profit >= 0 ? '+' : '') + roi + '%';
 }
 
+
+function getBetMatchTime(b) {
+  if (b.matchDate) {
+    const t = new Date(b.matchDate).getTime();
+    if (!isNaN(t)) return t;
+  }
+  if (b.home && b.away && typeof allFixtures !== 'undefined') {
+    const hL = b.home.toLowerCase();
+    const aL = b.away.toLowerCase();
+    const f = allFixtures.find(fix => {
+      const fixH = (fix.home || '').toLowerCase();
+      const fixA = (fix.away || '').toLowerCase();
+      return (fixH.includes(hL) || hL.includes(fixH)) && (fixA.includes(aL) || aL.includes(fixA));
+    });
+    if (f && f.date) {
+      const t = new Date(f.date).getTime();
+      if (!isNaN(t)) return t;
+    }
+  }
+  if (b.dateStr) {
+    const mMatch = b.dateStr.match(/(\d{1,2})\s+([A-Za-z]+)(?:,\s*(\d{1,2})[.:](\d{2}))?/);
+    if (mMatch) {
+      const day = parseInt(mMatch[1], 10);
+      const mStr = mMatch[2].toLowerCase().substr(0, 3);
+      const hour = mMatch[3] ? parseInt(mMatch[3], 10) : 0;
+      const min = mMatch[4] ? parseInt(mMatch[4], 10) : 0;
+      const months = { jan: 0, feb: 1, mar: 2, apr: 3, mei: 4, may: 4, jun: 5, jul: 6, agu: 7, aug: 7, sep: 8, okt: 9, oct: 9, nov: 10, des: 11, dec: 11 };
+      const month = months[mStr] !== undefined ? months[mStr] : 9;
+      return new Date(2026, month, day, hour, min).getTime();
+    }
+  }
+  return b.date ? new Date(b.date).getTime() : 0;
+}
+
 let activeBetHistoryFilter = 'all';
 
 function filterBetStatus(status) {
@@ -5356,8 +5392,16 @@ function renderBetHistory() {
   document.getElementById('bet-history-count').textContent = `(${userBets.length} tiket)`;
 
   const filtered = activeBetHistoryFilter === 'all'
-    ? userBets
+    ? userBets.slice()
     : userBets.filter(b => b.status === activeBetHistoryFilter);
+
+  // Urutkan tiket kronologis berdasarkan jadwal kickoff bermain (laga terdekat yang main duluan di paling atas)
+  filtered.sort((a, b) => {
+    const timeA = getBetMatchTime(a);
+    const timeB = getBetMatchTime(b);
+    if (timeA !== timeB) return timeA - timeB;
+    return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime();
+  });
 
   if (!filtered.length) {
     c.innerHTML = `<div class="text-center py-5 text-xs text-[var(--muted-foreground)]">Tidak ada tiket dengan status ${activeBetHistoryFilter.toUpperCase()}.</div>`;
