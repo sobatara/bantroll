@@ -512,16 +512,15 @@ let supabaseClient = null;
 try {
   if (window.supabase && typeof window.supabase.createClient === 'function') {
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('⚡ Supabase Client initialized successfully.');
   }
 } catch (e) {
-  console.warn('Supabase client init error:', e);
+  console.warn('Supabase JS init warning:', e);
 }
 
 function betToRow(b) {
   return {
     id: b.id,
-    user_id: 'owner',
+    user_id: b.strategyKey || 'owner',
     match: b.match || '',
     home: b.home || '',
     away: b.away || '',
@@ -539,6 +538,7 @@ function betToRow(b) {
 function rowToBet(r) {
   return {
     id: r.id,
+    strategyKey: (r.user_id && r.user_id !== 'owner') ? r.user_id : undefined,
     match: r.match,
     home: r.home,
     away: r.away,
@@ -553,87 +553,92 @@ function rowToBet(r) {
   };
 }
 
+// Gunakan Direct Native Fetch REST API agar 100% tembus di HP & Laptop meskipun CDN terblokir
 async function syncBetToCloud(bet) {
-  if (!supabaseClient) return;
   try {
     const row = betToRow(bet);
-    await supabaseClient.from('bankroll_bets').upsert(row);
+    await fetch(SUPABASE_URL + '/rest/v1/bankroll_bets', {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(row)
+    });
   } catch (err) {
-    console.warn('Sync bet error:', err);
+    console.warn('Direct syncBetToCloud error:', err);
   }
 }
 
 async function deleteBetFromCloud(betId) {
-  if (!supabaseClient) return;
   try {
-    await supabaseClient.from('bankroll_bets').delete().eq('id', betId);
+    await fetch(SUPABASE_URL + '/rest/v1/bankroll_bets?id=eq.' + encodeURIComponent(betId), {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY
+      }
+    });
   } catch (err) {
-    console.warn('Delete bet error:', err);
+    console.warn('Direct deleteBetFromCloud error:', err);
   }
 }
 
+let _isRealtimeSubscribed = false;
+
 async function initBankrollCloudSync() {
-  if (!supabaseClient) return;
   try {
-    const { data, error } = await supabaseClient
-      .from('bankroll_bets')
-      .select('*')
-      .neq('league_code', 'LIGA1')
-      .order('created_at', { ascending: false });
+    const res = await fetch(SUPABASE_URL + '/rest/v1/bankroll_bets?select=*&order=created_at.desc', {
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
+        'Cache-Control': 'no-cache'
+      }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const validRows = data.filter(r => r.league_code !== 'LIGA1');
+        const cloudBets = validRows.map(rowToBet);
 
-    if (!error && Array.isArray(data)) {
-      const cloudBets = data.map(rowToBet);
-      const localBets = JSON.parse(localStorage.getItem('top5_user_bets_v1') || '[]');
-
-      // Sinkronkan tiket lokal yang mungkin belum ada di cloud
-      localBets.forEach(lb => {
-        if (!cloudBets.some(cb => cb.id === lb.id)) {
-          cloudBets.push(lb);
-          syncBetToCloud(lb);
+        if (cloudBets.length === 0) {
+          const localBets = JSON.parse(localStorage.getItem('top5_user_bets_v1') || '[]');
+          localBets.forEach(lb => {
+            cloudBets.push(lb);
+            syncBetToCloud(lb);
+          });
         }
-      });
 
-      userBets = cloudBets;
-      localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
-      renderBetKPIs();
-      renderBetHistory();
-      renderValuePicks();
-    }
-  } catch (e) {
-    console.warn('Bankroll cloud fetch failed:', e);
-  }
-
-  // Realtime subscription (Listen changes from laptop or mobile)
-  try {
-    supabaseClient.channel('realtime_bankroll_bets')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bankroll_bets' }, (payload) => {
-        console.log('⚡ Realtime Cloud Event:', payload.eventType, payload);
-        if (payload.new && payload.new.league_code === 'LIGA1') return;
-        if (payload.eventType === 'INSERT') {
-          const newBet = rowToBet(payload.new);
-          if (!userBets.some(b => b.id === newBet.id)) {
-            userBets.unshift(newBet);
-          }
-        } else if (payload.eventType === 'UPDATE') {
-          const updated = rowToBet(payload.new);
-          const idx = userBets.findIndex(b => b.id === updated.id);
-          if (idx !== -1) {
-            userBets[idx] = { ...userBets[idx], ...updated };
-          } else {
-            userBets.unshift(updated);
-          }
-        } else if (payload.eventType === 'DELETE') {
-          const delId = payload.old.id;
-          userBets = userBets.filter(b => b.id !== delId);
-        }
+        userBets = cloudBets;
         localStorage.setItem('top5_user_bets_v1', JSON.stringify(userBets));
         renderBetKPIs();
         renderBetHistory();
         renderValuePicks();
-      })
-      .subscribe();
-  } catch (err) {
-    console.warn('Realtime subscription warning:', err);
+
+        const badge = document.getElementById('cloud-sync-badge');
+        if (badge) {
+          badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span><span>☁️ Cloud Sync (' + userBets.length + ' Tiket)</span>';
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Direct cloud fetch failed:', e);
+  }
+
+  if (!_isRealtimeSubscribed && supabaseClient) {
+    _isRealtimeSubscribed = true;
+    try {
+      supabaseClient.channel('realtime_bankroll_bets')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'bankroll_bets' }, () => {
+          initBankrollCloudSync();
+  setInterval(() => { if (document.visibilityState === 'visible') initBankrollCloudSync(); }, 10000);
+        })
+        .subscribe();
+    } catch (err) {
+      console.warn('Realtime subscription warning:', err);
+    }
   }
 }
 
@@ -6367,6 +6372,10 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   renderAllViews();
+  initBankrollCloudSync();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') initBankrollCloudSync();
+  });
 
   // 2. Jalankan Auto-Sync live ke server API-Sports jika belum pernah sync hari ini
   // Jalankan sinkronisasi Live Score real-time secara berkala tiap 60 detik
